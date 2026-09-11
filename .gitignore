@@ -1,0 +1,49 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Next.js build outputs
+/.next/
+/out/
+/build
+
+# Environment variables & secrets (Never commit real credentials)
+.env
+.env*.local
+.env.production
+.env.development
+!.env.example
+
+# Debug and runtime logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS metadata
+.DS_Store
+*.pem
+Thumbs.db
+
+# TypeScript incremental cache
+*.tsbuildinfo
+next-env.d.ts
+
+# Testing & coverage
+/coverage
+
+# IDE & Editor files
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# Local SQLite / Temporary databases
+*.sqlite
+*.sqlite3
+*.db-journal

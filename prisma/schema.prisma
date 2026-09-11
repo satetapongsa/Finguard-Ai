@@ -1,0 +1,190 @@
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+// ---------------------------------------------------------
+// 1. IDENTITY & ACCESS MANAGEMENT (NextAuth.js v5 + RBAC)
+// ---------------------------------------------------------
+
+enum Role {
+  ADMIN
+  COMPLIANCE_OFFICER
+  AUDITOR
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String?
+  email         String     @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          Role       @default(COMPLIANCE_OFFICER)
+  accounts      Account[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([role])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ---------------------------------------------------------
+// 2. BFSI FINANCIAL ACCOUNTS & DOUBLE-ENTRY LEDGER
+// ---------------------------------------------------------
+
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  UNDER_INVESTIGATION
+  CLOSED
+}
+
+model FinancialAccount {
+  id            String        @id @default(cuid())
+  accountNumber String        @unique
+  accountName   String
+  balance       Decimal       @default(0.0) @db.Decimal(18, 2)
+  currency      String        @default("THB")
+  status        AccountStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  outgoingTransactions Transaction[] @relation("SourceAccount")
+  incomingTransactions Transaction[] @relation("DestinationAccount")
+
+  @@index([accountNumber])
+  @@index([status])
+}
+
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  FLAGGED
+  REJECTED
+}
+
+enum TransactionType {
+  TRANSFER
+  SETTLEMENT
+  DISBURSEMENT
+  CROSS_BORDER
+}
+
+model Transaction {
+  id                   String            @id @default(cuid())
+  sourceAccountId      String
+  destinationAccountId String
+  amount               Decimal           @db.Decimal(18, 2)
+  currency             String            @default("THB")
+  type                 TransactionType   @default(TRANSFER)
+  status               TransactionStatus @default(PENDING)
+  riskScore            Float             @default(0.0)
+  riskReason           String?
+  metadata             Json?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  sourceAccount      FinancialAccount @relation("SourceAccount", fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  destinationAccount FinancialAccount @relation("DestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+
+  @@index([sourceAccountId])
+  @@index([destinationAccountId])
+  @@index([status])
+  @@index([riskScore])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------
+// 3. REGULATORY COMPLIANCE POLICIES & PGVECTOR EMBEDDINGS
+// ---------------------------------------------------------
+
+model CompliancePolicy {
+  id         String                        @id @default(cuid())
+  code       String                        @unique // e.g. "BOT-NO-12/2566", "AMLO-SEC-2024-01"
+  title      String
+  category   String                        // e.g. "AML", "KYC", "PDPA", "CROSS_BORDER"
+  rawContent String                        @db.Text
+  embedding  Unsupported("vector(1536)")?
+  isActive   Boolean                       @default(true)
+  createdAt  DateTime                      @default(now())
+  updatedAt  DateTime                      @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+}
+
+// ---------------------------------------------------------
+// 4. CRYPTOGRAPHIC IMMUTABLE AUDIT LOG (WRITE-ONLY)
+// ---------------------------------------------------------
+
+enum AuditStatus {
+  SUCCESS
+  BLOCKED
+  ALERT
+}
+
+model AuditLog {
+  id             String      @id @default(cuid())
+  actorId        String?
+  actionType     String      // e.g. "TRANSACTION_EXECUTE", "POLICY_QUERY", "PII_MASKED"
+  targetResource String      // e.g. "Transaction", "FinancialAccount", "CompliancePolicy"
+  resourceId     String?
+  payloadHash    String      // SHA-256 integrity hash of sanitized payload
+  ipAddress      String?
+  status         AuditStatus @default(SUCCESS)
+  details        Json?
+  createdAt      DateTime    @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([actionType])
+  @@index([targetResource])
+  @@index([payloadHash])
+  @@index([createdAt])
+}
