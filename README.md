@@ -12,68 +12,173 @@
 
 ---
 
-## 🏛️ System Architecture
+## 🏛️ System Architecture & Data Flow
 
-```
-                                  [ CLIENT LAYER ]
-               Next.js 15+ App Router • Tailwind CSS • Lucide • Zustand
-                                          │
-                                          ▼
-                             [ ZERO-TRUST EDGE & RBAC ]
-                 NextAuth v5 (JWT) • Ingress Filtering • Role Guards
-                                          │
-                                          ▼
-                            [ PDPA & PII MASKING SHIELD ]
-              Deterministic Regex: Thai National ID • Credit Cards • Phones
-                                          │
-                    ┌─────────────────────┴─────────────────────┐
-                    ▼                                           ▼
-         [ ACID LEDGER ENGINE ]                    [ REGULATORY RAG COPILOT ]
-      Double-Entry Balance Checks                 pgvector Policy Retrieval (<=>)
-   Prisma Serializable $transaction               Vercel AI SDK Streaming Engine
-                    │                                           │
-                    └─────────────────────┬─────────────────────┘
-                                          ▼
-                         [ IMMUTABLE AUDIT STORE (SHA-256) ]
-               Non-Repudiation Checksums • Write-Only Sequential Log
+Below is the complete end-to-end system architecture visualized natively in Mermaid:
+
+```mermaid
+flowchart TB
+    %% =========================================================================
+    %% STYLING DEFINITIONS
+    %% =========================================================================
+    classDef client fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef edge fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#f8fafc;
+    classDef security fill:#450a0a,stroke:#f43f5e,stroke-width:2px,color:#f8fafc;
+    classDef core fill:#0c2d48,stroke:#0ea5e9,stroke-width:2px,color:#f8fafc;
+    classDef ai fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+    classDef data fill:#1e1e24,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
+    classDef audit fill:#3b0764,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
+
+    %% =========================================================================
+    %% LAYER 1: CLIENT & PRESENTATION LAYER
+    %% =========================================================================
+    subgraph L1 ["1. Client & Presentation Layer (Next.js 15+ / React 19)"]
+        UI_DASH["Executive Ledger Dashboard\n(Real-time KPIs & Risk Stream)"]:::client
+        UI_COPILOT["Compliance Copilot UI\n(Split-screen Inspector & Chat)"]:::client
+        UI_AUDIT["Immutable Audit Explorer\n(Cryptographic Hash Verifier)"]:::client
+        STATE_STORE["Client State Engine\n(Zustand + NextAuth v5 JWT)"]:::client
+    end
+
+    %% =========================================================================
+    %% LAYER 2: EDGE GATEWAY & SECURITY PERIMETER
+    %% =========================================================================
+    subgraph L2 ["2. Edge Gateway & Security Perimeter (Zero-Trust Ingress)"]
+        EDGE_ROUTER["Edge Reverse Proxy / WAF\n(DDoS Shield & TLS 1.3 Termination)"]:::edge
+        AUTH_RBAC["Identity & RBAC Middleware\n(Admin / Compliance Officer / Auditor)"]:::edge
+        PDPA_SHIELD["PDPA & PII Sanitization Engine\n(Regex Masking: Thai ID, PAN, Mobile, Email)"]:::security
+    end
+
+    %% =========================================================================
+    %% LAYER 3: CORE APPLICATION & AGENTIC ORCHESTRATION LAYER
+    %% =========================================================================
+    subgraph L3 ["3. Core Application & Agentic Orchestration Layer (Node.js Runtime)"]
+        API_GW["REST & SSE Event Handlers\n(Next.js App Router API Handlers)"]:::core
+        AGENT_ORCH["Agentic Workflow Orchestrator\n(Vercel AI SDK / Tool Calling Coordinator)"]:::core
+        
+        subgraph ENGINES ["Specialized Domain Engines"]
+            TX_ENGINE["ACID Transaction Engine\n(Double-Entry Ledger & Balance Guard)"]:::core
+            RISK_ENGINE["Autonomous Risk Engine\n(Velocity Profiler & Threshold Heuristics)"]:::core
+            COMPLIANCE_ENGINE["Policy Verification Engine\n(Regulatory Directive Parser)"]:::core
+        end
+    end
+
+    %% =========================================================================
+    %% LAYER 4: AI INFERENCE & KNOWLEDGE RETRIEVAL (RAG) LAYER
+    %% =========================================================================
+    subgraph L4 ["4. AI Inference & Knowledge Retrieval (RAG) Layer"]
+        VEC_STORE["PostgreSQL Vector Store\n(pgvector: Cosine Distance & HNSW Index)"]:::ai
+        INGEST_PIPE["Regulatory Ingestion Pipeline\n(PDF/Circular Parser & Chunking)"]:::ai
+        LLM_GW["LLM Inference Gateway\n(Streaming Adapters: Gemini 1.5/2.5 & Claude)"]:::ai
+        GUARD_LLM["Model Alignment Guardrail\n(Prompt Injection & Jailbreak Defense)"]:::security
+    end
+
+    %% =========================================================================
+    %% LAYER 5: DATA PERSISTENCE & IMMUTABLE AUDIT LAYER
+    %% =========================================================================
+    subgraph L5 ["5. Data Persistence & Immutable Audit Layer (PostgreSQL & Object Store)"]
+        DB_LEDGER[("Primary Transaction Ledger\nPostgreSQL: Serializable Isolation")]:::data
+        AUDIT_STORE[("Immutable Write-Only Audit Log\nSHA-256 Checksums & Event Ledger")]:::audit
+        DOC_STORE[("Encrypted Policy Object Store\nS3-Compatible / SSE-KMS Encrypted")]:::data
+    end
+
+    %% =========================================================================
+    %% INTER-LAYER COMMUNICATIONS & PROTOCOLS
+    %% =========================================================================
+    UI_DASH -->|HTTPS / WSS| EDGE_ROUTER
+    UI_COPILOT -->|Server-Sent Events / Stream| EDGE_ROUTER
+    UI_AUDIT -->|HTTPS / JSON| EDGE_ROUTER
+    STATE_STORE -.->|Bearer JWT Token| EDGE_ROUTER
+
+    EDGE_ROUTER -->|TLS Terminated Ingress| AUTH_RBAC
+    AUTH_RBAC -->|Validated Claims & Role| PDPA_SHIELD
+    PDPA_SHIELD -->|Sanitized Payload & Masked PII| API_GW
+
+    API_GW -->|Execute Transfer| TX_ENGINE
+    API_GW -->|Analyze Inquiry| AGENT_ORCH
+
+    TX_ENGINE -->|Pre-execution Velocity & Amount Check| RISK_ENGINE
+    RISK_ENGINE -->|Risk Score > 0.65 Escalation| AGENT_ORCH
+
+    AGENT_ORCH -->|Policy Keyword & Vector Query| VEC_STORE
+    AGENT_ORCH -->|Sanitized Prompt + Retrieved Policies| GUARD_LLM
+    GUARD_LLM -->|Streamed Prompt| LLM_GW
+    LLM_GW -->|Token Stream with Citations| API_GW
+
+    INGEST_PIPE -->|Chunked Embeddings 1536d| VEC_STORE
+    INGEST_PIPE -->|Raw Document Archive| DOC_STORE
+
+    TX_ENGINE -->|prisma.$transaction: Debit & Credit| DB_LEDGER
+    TX_ENGINE -->|Compute SHA-256 Hash of Sanitized Payload| AUDIT_STORE
+    AGENT_ORCH -->|Log AI Audit Event & Citation Hashes| AUDIT_STORE
+    API_GW -->|Query Tamper-Evident Records| AUDIT_STORE
 ```
 
 ---
 
-## ⚡ Core Highlights
+## ⚡ Core Technical Pillars
 
 1. **ACID Double-Entry Ledger Engine**
    - Atomic debit/credit settlement via `prisma.$transaction` using `SERIALIZABLE` isolation.
-   - Mathematical overdraft prevention, race condition mitigation, and balance consistency.
+   - Mathematical overdraft prevention, race condition elimination, and ledger balance consistency.
 
-2. **PDPA & PII Sanitization Middleware**
-   - Automatically redacts sensitive financial identifiers (Thai 13-digit National IDs, 16-digit card PANs, and phone numbers) prior to logging or LLM consumption.
+2. **PDPA & PII Sanitization Guardrail Middleware**
+   - Automatically masks sensitive personal identifiers (13-digit Thai National IDs, 16-digit payment card PANs, phone numbers, and emails) prior to logging or LLM consumption.
 
-3. **Autonomous Risk & Anomaly Scorer**
-   - Sub-second heuristic scoring enforcing Bank of Thailand rules (฿500K THB threshold) and AMLO rules (฿2M THB mandatory reporting, cross-border checks, burst velocity detection).
+3. **Autonomous Risk & Anomaly Scoring Engine**
+   - Real-time heuristic scoring checking Bank of Thailand rules (฿500,000 THB threshold) and AMLO directives (฿2,000,000 THB mandatory reporting, cross-border checks, burst velocity detection).
 
-4. **Vector-Augmented Regulatory RAG (pgvector)**
+4. **Vector-Augmented Regulatory RAG (`pgvector`)**
    - High-dimension policy retrieval against regulatory frameworks (BOT circulars, AMLO directives, FATF Recommendation 16).
    - Real-time token streaming with precise legal citations (`[BOT-NO-12/2566]`, `[AMLO-SEC-2024-01]`).
 
 5. **Cryptographic Tamper-Evident Audit Explorer**
-   - Append-only write store calculating deterministic SHA-256 hashes of all payloads for non-repudiation and external regulatory inspection.
+   - Append-only write store calculating deterministic SHA-256 hashes of all sanitized payloads for non-repudiation and external regulatory examination.
 
 ---
 
-## 🚀 Getting Started
+## 🔄 Execution Data Flows
+
+### Scenario 1: Financial Document Ingestion & Compliance Interrogation
+```
+[User Query / Document] ──► [Edge RBAC] ──► [PDPA Sanitizer] ──► [pgvector Policy RAG]
+                                                                          │
+                                                                          ▼
+[Immutable Audit Store] ◄── [Audit SHA-256] ◄── [Token Stream] ◄── [AI Copilot Model]
+```
+
+### Scenario 2: High-Volume Transaction Anomaly Verification
+```
+[Transfer Request] ──► [PDPA Masking] ──► [Risk Scorer]
+                                               │
+                                 ┌─────────────┴─────────────┐
+                                 ▼                           ▼
+                        [Low Risk (<0.65)]          [High Risk (>=0.65)]
+                                 │                           │
+                                 │                  [Autonomous AI Alert]
+                                 └─────────────┬─────────────┘
+                                               ▼
+                                 [prisma.$transaction]
+                                 - Debit Source Balance
+                                 - Credit Destination Balance
+                                               │
+                                 ┌─────────────┴─────────────┐
+                                 ▼                           ▼
+                     [Primary Transaction DB]   [SHA-256 Immutable Audit Log]
+```
+
+---
+
+## 🚀 Quick Start Guide
 
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/<your-username>/finguard-ai.git
+git clone https://github.com/satetapongsa/finguard-ai.git
 cd finguard-ai
 npm install
 ```
 
 ### 2. Environment Configuration
-
-Copy the example environment file and configure your keys:
 
 ```bash
 cp .env.example .env
@@ -92,7 +197,7 @@ GOOGLE_GENERATIVE_AI_API_KEY="your-gemini-api-key"
 # Generate Prisma Client
 npx prisma generate
 
-# Push schema to PostgreSQL with pgvector (when database is connected)
+# Push schema to PostgreSQL with pgvector
 npx prisma db push
 
 # Seed mock accounts, policies, and transactions
@@ -112,19 +217,16 @@ Open [http://localhost:3000](http://localhost:3000) (or `http://localhost:3001`)
 ## 🧪 Testing & Verification
 
 Run the security and PDPA guardrail test suite:
-
 ```bash
 npx tsx tests/guardrails.test.ts
 ```
 
 Run strict TypeScript compiler type check:
-
 ```bash
 npx tsc --noEmit
 ```
 
 Build for production:
-
 ```bash
 npm run build
 ```
@@ -150,7 +252,7 @@ finguard-ai/
 │   │   ├── audit/             # Immutable Audit Explorer UI
 │   │   ├── compliance/        # AI Compliance Copilot split-screen
 │   │   ├── dashboard/         # Executive KPI Dashboard & Ledger Table
-│   │   ├── globals.css        # BFSI dark theme, glassmorphism & risk styling
+│   │   ├── globals.css        # BFSI dark theme, glassmorphism & fonts
 │   │   └── layout.tsx         # Root layout with navigation & modal
 │   ├── components/
 │   │   ├── Navigation.tsx     # Top header with engine status indicators
@@ -183,4 +285,4 @@ finguard-ai/
 ---
 
 ## 🛡️ Security & Privacy Notice
-All demo credentials and test records use non-production, synthetic datasets. Never commit live banking credentials or active private API keys to version control.
+All demo credentials and test records use synthetic datasets. Never commit live banking credentials or active private API keys to version control.
