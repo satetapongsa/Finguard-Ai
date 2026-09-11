@@ -7,16 +7,17 @@ import {
   Sparkles,
   BookOpen,
   FileSearch,
-  ShieldCheck,
   AlertTriangle,
-  FileText,
   Copy,
   Check,
   RotateCcw,
-  Scale,
+  Zap,
+  ArrowRight,
+  BadgeAlert,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
-import { TransactionWithAccounts, CompliancePolicyItem } from "@/lib/types";
+import { CompliancePolicyItem } from "@/lib/types";
 
 interface ChatMessage {
   id: string;
@@ -27,7 +28,6 @@ interface ChatMessage {
 
 export default function ComplianceCopilotPage() {
   const selectedTransaction = useComplianceStore((s) => s.selectedTransaction);
-  const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
 
   const [activeTab, setActiveTab] = useState<"transaction" | "policies">("transaction");
   const [policies, setPolicies] = useState<CompliancePolicyItem[]>([]);
@@ -39,10 +39,10 @@ export default function ComplianceCopilotPage() {
     {
       id: "welcome-1",
       role: "assistant",
-      content: `### 👋 FinGuard AI Autonomous Compliance Copilot Active
-I am your specialized BFSI Compliance Intelligence Agent. I continuously verify transactions against Bank of Thailand (BOT), Anti-Money Laundering Office (AMLO), and PDPA frameworks.
+      content: `### 🛡️ FinGuard AI Sovereign Compliance Copilot
+I am your autonomous regulatory intelligence agent. I continuously cross-reference transactions and inquiries against **Bank of Thailand (BOT)**, **Anti-Money Laundering Office (AMLO)**, and **PDPA B.E. 2562** legal directives.
 
-Select a transaction or regulatory policy on the left, or ask a question below.`,
+Select a transaction or regulatory policy on the left, or query below.`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -130,7 +130,6 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
 
         for (const line of lines) {
           if (line.startsWith("0:")) {
-            // Vercel AI SDK text stream chunk format: 0:"token"
             try {
               const textContent = JSON.parse(line.slice(2));
               accumulatedText += textContent;
@@ -142,7 +141,7 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
                 )
               );
             } catch (_err) {
-              // Ignore non-json chunks
+              // Ignore non-json chunk fragments
             }
           }
         }
@@ -172,53 +171,57 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
   };
 
   return (
-    <div className="h-[calc(100vh-8.5rem)] flex flex-col md:flex-row gap-4">
+    <div className="h-[calc(100vh-9.5rem)] flex flex-col lg:flex-row gap-5 pb-4">
       {/* ========================================================================= */}
       {/* LEFT PANEL: DOCUMENT / TRANSACTION INSPECTOR                             */}
       {/* ========================================================================= */}
-      <div className="w-full md:w-5/12 flex flex-col bfsi-glass-card rounded-2xl border border-slate-800 overflow-hidden">
+      <div className="w-full lg:w-5/12 flex flex-col glass-panel rounded-3xl border border-slate-800/90 overflow-hidden shadow-2xl">
         {/* Panel Tabs */}
-        <div className="flex border-b border-slate-800 bg-slate-900/60 p-1.5 gap-1">
+        <div className="flex border-b border-slate-800/80 bg-slate-950/60 p-2 gap-1.5">
           <button
             onClick={() => setActiveTab("transaction")}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeTab === "transaction"
-                ? "bg-slate-800 text-cyan-400 border border-slate-700 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-gradient-to-r from-cyan-950 to-slate-800 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                : "text-slate-400 hover:text-white"
             }`}
           >
-            <FileSearch className="w-3.5 h-3.5" />
+            <FileSearch className="w-4 h-4" />
             <span>Active Transaction</span>
           </button>
           <button
             onClick={() => setActiveTab("policies")}
-            className={`flex-1 flex items-center justify-center space-x-2 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+            className={`flex-1 flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeTab === "policies"
-                ? "bg-slate-800 text-cyan-400 border border-slate-700 shadow-sm"
-                : "text-slate-400 hover:text-slate-200"
+                ? "bg-gradient-to-r from-cyan-950 to-slate-800 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                : "text-slate-400 hover:text-white"
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Regulatory Policies ({policies.length})</span>
+            <BookOpen className="w-4 h-4" />
+            <span>Regulatory Library ({policies.length})</span>
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
           {activeTab === "transaction" ? (
             selectedTransaction ? (
               <div className="space-y-4">
-                {/* Transaction Header Banner */}
-                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                {/* Transaction Reference Header */}
+                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-700/80 flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-400 font-mono">TXN REF</span>
-                    <p className="font-mono font-bold text-white text-xs">{selectedTransaction.id}</p>
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 font-mono">
+                      TRANSACTION ID
+                    </span>
+                    <p className="font-mono font-bold text-white text-sm mt-0.5">
+                      {selectedTransaction.id}
+                    </p>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    className={`px-3 py-1 rounded-full text-[11px] font-extrabold ${
                       selectedTransaction.status === "APPROVED"
-                        ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                        : "bg-rose-950 text-rose-400 border border-rose-800 animate-pulse"
+                        ? "bg-emerald-950 text-emerald-400 border border-emerald-700/60"
+                        : "bg-rose-950 text-rose-400 border border-rose-700/60 animate-pulse"
                     }`}
                   >
                     {selectedTransaction.status}
@@ -227,18 +230,22 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
 
                 {/* Amount & Risk Overview */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <span className="text-[10px] text-slate-400">Ledger Amount</span>
-                    <p className="text-base font-bold font-mono text-white mt-0.5">
+                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                      Amount Settled
+                    </span>
+                    <p className="text-xl font-extrabold font-mono text-white mt-1">
                       ฿{Number(selectedTransaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
-                    <span className="text-[10px] text-cyan-400 font-mono">{selectedTransaction.currency}</span>
+                    <span className="text-[10px] font-mono text-cyan-400 font-semibold">{selectedTransaction.currency}</span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <span className="text-[10px] text-slate-400">Heuristic Risk Score</span>
+                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                      Heuristic Risk Score
+                    </span>
                     <p
-                      className={`text-base font-bold font-mono mt-0.5 ${
+                      className={`text-xl font-extrabold font-mono mt-1 ${
                         selectedTransaction.riskScore >= 0.65
                           ? "text-rose-400"
                           : selectedTransaction.riskScore >= 0.3
@@ -248,25 +255,33 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
                     >
                       {Math.round(selectedTransaction.riskScore * 100)}%
                     </p>
-                    <span className="text-[10px] text-slate-400">Autonomous Index</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Autonomous Index</span>
                   </div>
                 </div>
 
-                {/* Accounts */}
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
-                  <div className="flex justify-between border-b border-slate-800 pb-2">
+                {/* Account Details */}
+                <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-3">
+                  <div className="flex justify-between border-b border-slate-800 pb-2.5">
                     <div>
-                      <span className="text-[10px] text-slate-400">Source (Debit)</span>
-                      <p className="font-semibold text-slate-200">{selectedTransaction.sourceAccount.accountName}</p>
-                      <p className="font-mono text-[10px] text-slate-500">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Source (Debit)
+                      </span>
+                      <p className="font-bold text-white text-xs mt-0.5">
+                        {selectedTransaction.sourceAccount.accountName}
+                      </p>
+                      <p className="font-mono text-[11px] text-slate-400">
                         {selectedTransaction.sourceAccount.accountNumber}
                       </p>
                     </div>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400">Destination (Credit)</span>
-                    <p className="font-semibold text-slate-200">{selectedTransaction.destinationAccount.accountName}</p>
-                    <p className="font-mono text-[10px] text-slate-500">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Destination (Credit)
+                    </span>
+                    <p className="font-bold text-white text-xs mt-0.5">
+                      {selectedTransaction.destinationAccount.accountName}
+                    </p>
+                    <p className="font-mono text-[11px] text-slate-400">
                       {selectedTransaction.destinationAccount.accountNumber}
                     </p>
                   </div>
@@ -274,49 +289,53 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
 
                 {/* Risk Reasons & Breach Flags */}
                 {selectedTransaction.riskReason && (
-                  <div className="p-3 rounded-xl bg-rose-950/20 border border-rose-800/40 text-rose-200">
-                    <div className="flex items-center space-x-1.5 font-semibold text-[11px] mb-1 text-rose-400">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Regulatory Flags Triggered</span>
+                  <div className="p-4 rounded-2xl bg-rose-950/25 border border-rose-800/50 text-rose-200">
+                    <div className="flex items-center space-x-2 font-bold text-xs mb-1.5 text-rose-400">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>Regulatory Triggers & Anomaly Flags</span>
                     </div>
-                    <p className="text-[11px] leading-relaxed">{selectedTransaction.riskReason}</p>
+                    <p className="text-xs leading-relaxed text-slate-200 font-medium">
+                      {selectedTransaction.riskReason}
+                    </p>
                   </div>
                 )}
 
-                {/* Quick Analyze Button */}
+                {/* Action CTA */}
                 <button
                   onClick={() =>
                     handleSendMessage(
                       `Please perform an exhaustive Bank of Thailand (BOT) and AMLO compliance inspection for transaction ${selectedTransaction.id} of amount ฿${selectedTransaction.amount}. Identify potential structuring, reporting thresholds, and mandatory regulatory filings.`
                     )
                   }
-                  className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold shadow-lg shadow-cyan-600/20 transition cursor-pointer"
+                  className="w-full flex items-center justify-center space-x-2 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-cyan-600/30 transition cursor-pointer"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Send Transaction to AI Copilot</span>
+                  <span>Interrogate with AI Compliance Copilot</span>
                 </button>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
-                <FileSearch className="w-10 h-10 text-slate-600 mb-3" />
-                <p className="font-semibold text-slate-300">No Transaction Currently Selected</p>
-                <p className="text-[11px] text-slate-500 mt-1 max-w-xs">
-                  Go to the Executive Dashboard and click &apos;Copilot&apos; on any transaction, or ask a general regulatory query.
+              <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-center mb-3">
+                  <FileSearch className="w-7 h-7 text-cyan-400" />
+                </div>
+                <p className="font-bold text-slate-200 text-sm">No Active Transaction Selected</p>
+                <p className="text-xs text-slate-400 mt-1.5 max-w-xs leading-relaxed">
+                  Go to the Dashboard and select &quot;Copilot&quot; on any transaction, or query general regulatory directives directly.
                 </p>
               </div>
             )
           ) : (
             /* Regulatory Policies Browser */
             <div className="space-y-3">
-              <div className="flex items-center space-x-2 pb-2">
+              <div className="flex items-center space-x-1.5 pb-2 overflow-x-auto">
                 {["ALL", "AML", "PDPA", "FRAUD"].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setPolicyCategory(cat)}
-                    className={`px-2 py-1 rounded text-[10px] font-medium transition cursor-pointer ${
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
                       policyCategory === cat
-                        ? "bg-cyan-900/60 text-cyan-300 border border-cyan-700"
-                        : "bg-slate-900 text-slate-400 hover:text-white"
+                        ? "bg-cyan-950 text-cyan-300 border border-cyan-700/80"
+                        : "bg-slate-900/80 text-slate-400 hover:text-white"
                     }`}
                   >
                     {cat}
@@ -332,23 +351,23 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
                     <div
                       key={pol.id}
                       onClick={() => setSelectedPolicy(pol)}
-                      className={`p-3 rounded-xl border transition cursor-pointer ${
+                      className={`p-4 rounded-2xl border transition duration-200 cursor-pointer ${
                         isSelected
-                          ? "bg-slate-800/80 border-cyan-500/60"
-                          : "bg-slate-900/50 border-slate-800 hover:border-slate-700"
+                          ? "bg-slate-900/90 border-cyan-500/60 shadow-lg shadow-cyan-950/30"
+                          : "bg-slate-900/40 border-slate-800/80 hover:border-slate-700"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-cyan-400 text-[11px]">{pol.code}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 uppercase font-mono">
+                        <span className="font-mono font-bold text-cyan-400 text-xs">{pol.code}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 uppercase font-mono font-semibold">
                           {pol.category}
                         </span>
                       </div>
-                      <h4 className="font-semibold text-white mt-1 text-xs">{pol.title}</h4>
-                      <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{pol.rawContent}</p>
+                      <h4 className="font-bold text-white mt-1.5 text-xs">{pol.title}</h4>
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{pol.rawContent}</p>
 
                       {isSelected && (
-                        <div className="mt-2 pt-2 border-t border-slate-700/60 flex justify-end">
+                        <div className="mt-3 pt-2.5 border-t border-slate-800 flex justify-end">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -356,9 +375,9 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
                                 `Analyze the regulatory requirements of [${pol.code}] ("${pol.title}") and how our institution should enforce automated controls.`
                               );
                             }}
-                            className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center space-x-1"
+                            className="text-xs text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1.5 cursor-pointer"
                           >
-                            <Sparkles className="w-3 h-3" />
+                            <Sparkles className="w-3.5 h-3.5" />
                             <span>Interrogate with Copilot</span>
                           </button>
                         </div>
@@ -374,17 +393,22 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
       {/* ========================================================================= */}
       {/* RIGHT PANEL: STREAMING AI COPILOT CHAT INTERFACE                          */}
       {/* ========================================================================= */}
-      <div className="w-full md:w-7/12 flex flex-col bfsi-glass-card rounded-2xl border border-slate-800 overflow-hidden">
+      <div className="w-full lg:w-7/12 flex flex-col glass-panel rounded-3xl border border-slate-800/90 overflow-hidden shadow-2xl">
         {/* Chat Header */}
-        <div className="p-3.5 border-b border-slate-800 bg-slate-900/70 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white">
-              <Bot className="w-4 h-4" />
+        <div className="p-4 border-b border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/20">
+              <Bot className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-xs">FinGuard Regulatory RAG Copilot</h3>
-              <p className="text-[10px] text-slate-400">
-                Connected to BOT, AMLO & PDPA Vector Knowledge Base
+              <div className="flex items-center space-x-2">
+                <h3 className="font-extrabold text-white text-sm tracking-tight">FinGuard Regulatory RAG Copilot</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/40">
+                  Online
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                Live inference against BOT, AMLO & PDPA Vector Knowledge Base
               </p>
             </div>
           </div>
@@ -401,53 +425,53 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
                   },
                 ])
               }
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               title="Reset Conversation"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Message Stream Scroll Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
           {messages.map((msg) => {
             const isBot = msg.role === "assistant";
             return (
               <div
                 key={msg.id}
-                className={`flex items-start space-x-2.5 ${
+                className={`flex items-start space-x-3 ${
                   isBot ? "justify-start" : "justify-end"
                 }`}
               >
                 {isBot && (
-                  <div className="w-6 h-6 rounded-md bg-cyan-950 border border-cyan-800/40 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
-                    <Bot className="w-3.5 h-3.5" />
+                  <div className="w-7 h-7 rounded-xl bg-cyan-950/80 border border-cyan-700/60 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
+                    <Bot className="w-4 h-4" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-[88%] rounded-2xl p-3.5 leading-relaxed relative group ${
+                  className={`max-w-[90%] rounded-2xl p-4 leading-relaxed relative group ${
                     isBot
-                      ? "bg-slate-900/90 border border-slate-800 text-slate-200"
-                      : "bg-cyan-600 text-white shadow-md shadow-cyan-600/20"
+                      ? "bg-slate-900/90 border border-slate-800/90 text-slate-200 shadow-lg"
+                      : "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/20"
                   }`}
                 >
-                  <div className="whitespace-pre-wrap font-sans text-xs space-y-2">
+                  <div className="whitespace-pre-wrap font-sans text-xs space-y-2 leading-relaxed">
                     {msg.content}
                   </div>
 
-                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-                    <span>{msg.timestamp}</span>
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/40 pt-1.5">
+                    <span className="font-mono text-[10px]">{msg.timestamp}</span>
                     {isBot && msg.content && (
                       <button
                         onClick={() => copyToClipboard(msg.content, msg.id)}
-                        className="opacity-0 group-hover:opacity-100 transition p-1 hover:text-white flex items-center space-x-1"
+                        className="opacity-0 group-hover:opacity-100 transition p-1 hover:text-white flex items-center space-x-1 cursor-pointer"
                       >
                         {copiedId === msg.id ? (
-                          <Check className="w-3 h-3 text-emerald-400" />
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
                         ) : (
-                          <Copy className="w-3 h-3" />
+                          <Copy className="w-3.5 h-3.5" />
                         )}
                         <span>{copiedId === msg.id ? "Copied" : "Copy"}</span>
                       </button>
@@ -459,7 +483,7 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
           })}
 
           {isStreaming && (
-            <div className="flex items-center space-x-2 text-cyan-400 text-xs pl-8">
+            <div className="flex items-center space-x-2 text-cyan-400 text-xs pl-10 font-medium">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
               <span>FinGuard Agent Synthesizing Regulatory Citations...</span>
             </div>
@@ -469,15 +493,15 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
         </div>
 
         {/* Quick Action Prompt Chips */}
-        <div className="px-4 py-2 bg-slate-900/50 border-t border-slate-800/60 flex items-center space-x-1.5 overflow-x-auto text-[10px]">
-          <span className="text-slate-500 font-semibold uppercase text-[9px] shrink-0">Prompts:</span>
+        <div className="px-5 py-2.5 bg-slate-950/60 border-t border-slate-800/60 flex items-center space-x-2 overflow-x-auto text-[11px]">
+          <span className="text-slate-500 font-bold uppercase text-[9px] shrink-0">Prompts:</span>
           <button
             onClick={() =>
               handleSendMessage(
                 "Evaluate Bank of Thailand threshold rules (BOT-NO-12/2566) for large transfers exceeding 500,000 THB."
               )
             }
-            className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 shrink-0 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition"
           >
             BOT 500K THB Rule
           </button>
@@ -487,7 +511,7 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
                 "Draft an AMLO Suspicious Transaction Report (STR) justification based on high-risk transaction velocity."
               )
             }
-            className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 shrink-0 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition"
           >
             Draft AMLO STR
           </button>
@@ -497,20 +521,20 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
                 "Check PDPA Section 2562 guardrail requirements for masking Thai National IDs and payment cards."
               )
             }
-            className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 shrink-0 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition"
           >
             PDPA Masking Audit
           </button>
         </div>
 
         {/* Chat Input */}
-        <div className="p-3 border-t border-slate-800 bg-slate-900/90">
+        <div className="p-4 border-t border-slate-800 bg-slate-950/80">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2.5"
           >
             <input
               type="text"
@@ -518,15 +542,15 @@ Select a transaction or regulatory policy on the left, or ask a question below.`
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask FinGuard Copilot regarding BOT/AMLO policies or transaction risks..."
               disabled={isStreaming}
-              className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+              className="flex-1 bg-slate-900/90 border border-slate-700/80 rounded-2xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition"
             />
             <button
               type="submit"
               disabled={!input.trim() || isStreaming}
-              className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md shadow-cyan-600/20 disabled:opacity-40 transition cursor-pointer flex items-center space-x-1"
+              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/30 disabled:opacity-40 transition cursor-pointer flex items-center space-x-1.5"
             >
               <span>Ask</span>
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-4 h-4" />
             </button>
           </form>
         </div>

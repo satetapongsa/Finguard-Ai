@@ -16,21 +16,36 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-[#080c14] text-slate-100 antialiased selection:bg-cyan-500 selection:text-white">
+      <body className="min-h-screen bg-[#040810] text-slate-100 antialiased selection:bg-cyan-500 selection:text-white font-sans">
         <div className="relative flex min-h-screen flex-col">
+          {/* Subtle Ambient Top Glow */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-64 bg-gradient-to-b from-cyan-500/10 via-blue-500/5 to-transparent pointer-events-none blur-3xl -z-10" />
+
           <Navigation />
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-7">
             {children}
           </main>
           <QuickTransferModal />
 
           {/* Footer */}
-          <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
-            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between">
-              <span>FinGuard AI Autonomous Compliance Engine &bull; Bank of Thailand & AMLO Framework</span>
-              <span className="mt-1 sm:mt-0 font-mono text-[11px] text-slate-400">
-                Double-Entry Ledger Verified &bull; SHA-256 Audit Trail
-              </span>
+          <footer className="border-t border-slate-800/80 bg-[#03060c] py-6 text-xs text-slate-400">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="font-semibold text-slate-300">
+                  FinGuard AI Autonomous Compliance Engine
+                </span>
+                <span className="text-slate-600">&bull;</span>
+                <span className="text-slate-400">Bank of Thailand & AMLO Framework</span>
+              </div>
+              <div className="font-mono text-[11px] text-slate-400 flex items-center space-x-2">
+                <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                  Double-Entry Invariant: Verified
+                </span>
+                <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                  SHA-256 Non-Repudiation
+                </span>
+              </div>
             </div>
           </footer>
         </div>

@@ -8,13 +8,13 @@ import {
   AlertTriangle,
   Scale,
   Search,
-  Filter,
   RefreshCw,
   ArrowUpRight,
-  ArrowDownRight,
   ExternalLink,
   PlusCircle,
   FileCheck2,
+  Lock,
+  Zap,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import { TransactionWithAccounts } from "@/lib/types";
@@ -93,110 +93,137 @@ export default function DashboardPage() {
     router.push("/compliance");
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase();
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+    <div className="space-y-7 pb-10">
+      {/* Top Banner / Hero Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center space-x-2">
-            <span>Autonomous Compliance Command Center</span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Real-time ACID double-entry settlement engine with autonomous AMLO & Bank of Thailand risk scoring
+          <div className="flex items-center space-x-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Autonomous Compliance Command Center
+            </h1>
+            <span className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-700/60">
+              <Zap className="w-3 h-3 text-cyan-400" />
+              <span>Real-Time Engine</span>
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1.5 font-medium max-w-2xl">
+            Double-entry ACID settlement with real-time heuristic AMLO & Bank of Thailand risk scoring.
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2.5">
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition cursor-pointer"
+            className="flex items-center space-x-2 px-3.5 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/80 transition cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            <span>Refresh Ledger</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
+            <span>Sync Ledger</span>
           </button>
           <button
             onClick={() => setQuickTransferOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md shadow-cyan-600/20 transition cursor-pointer"
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/30 transition cursor-pointer"
           >
-            <PlusCircle className="w-3.5 h-3.5" />
+            <PlusCircle className="w-4 h-4" />
             <span>New Transaction</span>
           </button>
         </div>
       </div>
 
       {/* Executive KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* KPI 1 */}
-        <div className="bfsi-glass-card rounded-xl p-4 border border-slate-800 relative overflow-hidden">
+        <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-600" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Total Volume Processed</span>
-            <div className="p-2 rounded-lg bg-cyan-950/60 border border-cyan-800/40 text-cyan-400">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Total Volume Processed
+            </span>
+            <div className="p-2.5 rounded-xl bg-cyan-950/60 border border-cyan-800/40 text-cyan-400 group-hover:scale-110 transition duration-200">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold font-mono text-white">
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white tracking-tight">
               ฿{stats.totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
-            <div className="mt-1 flex items-center text-[11px] text-emerald-400 space-x-1">
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>{stats.transactionCount} settled cycles</span>
+            <div className="mt-2 flex items-center text-xs font-semibold text-emerald-400 space-x-1.5">
+              <ArrowUpRight className="w-4 h-4" />
+              <span>{stats.transactionCount} settled transactions</span>
             </div>
           </div>
         </div>
 
         {/* KPI 2 */}
-        <div className="bfsi-glass-card rounded-xl p-4 border border-slate-800 relative overflow-hidden">
+        <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-600" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Verified Ledger Balance</span>
-            <div className="p-2 rounded-lg bg-emerald-950/60 border border-emerald-800/40 text-emerald-400">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Verified Ledger Balance
+            </span>
+            <div className="p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 group-hover:scale-110 transition duration-200">
               <Scale className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold font-mono text-white">
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-white tracking-tight">
               ฿{stats.verifiedLedgerBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
-            <div className="mt-1 flex items-center text-[11px] text-cyan-400 space-x-1">
-              <FileCheck2 className="w-3.5 h-3.5" />
-              <span>Double-Entry Balanced</span>
+            <div className="mt-2 flex items-center text-xs font-semibold text-cyan-400 space-x-1.5">
+              <FileCheck2 className="w-4 h-4" />
+              <span>Double-Entry Invariant Verified</span>
             </div>
           </div>
         </div>
 
         {/* KPI 3 */}
-        <div className="bfsi-glass-card rounded-xl p-4 border border-slate-800 relative overflow-hidden">
+        <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-600" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">High-Risk AML Flags</span>
-            <div className="p-2 rounded-lg bg-rose-950/60 border border-rose-800/40 text-rose-400">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              High-Risk AML Flags
+            </span>
+            <div className="p-2.5 rounded-xl bg-rose-950/60 border border-rose-800/40 text-rose-400 group-hover:scale-110 transition duration-200">
               <ShieldAlert className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold font-mono text-rose-400">
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-rose-400 tracking-tight">
               {stats.highRiskFlags}
             </div>
-            <div className="mt-1 flex items-center text-[11px] text-rose-400 space-x-1">
-              <AlertTriangle className="w-3.5 h-3.5" />
+            <div className="mt-2 flex items-center text-xs font-semibold text-rose-400 space-x-1.5">
+              <AlertTriangle className="w-4 h-4" />
               <span>Requires Copilot Interrogation</span>
             </div>
           </div>
         </div>
 
         {/* KPI 4 */}
-        <div className="bfsi-glass-card rounded-xl p-4 border border-slate-800 relative overflow-hidden">
+        <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-600" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-400">Active Regulatory Directives</span>
-            <div className="p-2 rounded-lg bg-purple-950/60 border border-purple-800/40 text-purple-400">
-              <AlertTriangle className="w-4 h-4" />
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Active Regulatory Directives
+            </span>
+            <div className="p-2.5 rounded-xl bg-purple-950/60 border border-purple-800/40 text-purple-400 group-hover:scale-110 transition duration-200">
+              <Lock className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold font-mono text-purple-300">
+          <div className="mt-4">
+            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-purple-300 tracking-tight">
               {stats.activeComplianceAlerts}
             </div>
-            <div className="mt-1 flex items-center text-[11px] text-purple-400 space-x-1">
+            <div className="mt-2 flex items-center text-xs font-semibold text-purple-400 space-x-1.5">
               <span>BOT &bull; AMLO &bull; PDPA &bull; FATF</span>
             </div>
           </div>
@@ -204,38 +231,40 @@ export default function DashboardPage() {
       </div>
 
       {/* Transaction Ledger Table Section */}
-      <div className="bfsi-glass-card rounded-xl border border-slate-800 overflow-hidden">
+      <div className="glass-panel rounded-3xl border border-slate-800/90 overflow-hidden shadow-2xl">
         {/* Table Header Controls */}
-        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-2">
-            <h2 className="font-bold text-sm text-white">Real-Time Transaction Ledger</h2>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+        <div className="p-5 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/40">
+          <div className="flex items-center space-x-3">
+            <h2 className="font-extrabold text-base text-white tracking-tight">
+              Real-Time Transaction Ledger
+            </h2>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono font-medium border border-slate-700/60">
               {filteredTransactions.length} records
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Search Input */}
             <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search account, name, ID..."
+                placeholder="Search account, name, or ref..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-48 sm:w-60"
+                className="bg-slate-950/80 border border-slate-700/80 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-52 sm:w-64 transition"
               />
             </div>
 
             {/* Status Filter Pills */}
-            <div className="flex items-center bg-slate-900 p-1 rounded-lg border border-slate-800 text-xs">
+            <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs">
               {(["ALL", "APPROVED", "FLAGGED"] as const).map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setStatusFilter(filter)}
-                  className={`px-2.5 py-1 rounded-md transition text-[11px] font-medium cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg transition text-xs font-bold cursor-pointer ${
                     statusFilter === filter
-                      ? "bg-slate-700 text-cyan-400 font-semibold"
+                      ? "bg-gradient-to-r from-cyan-900 to-slate-800 text-cyan-300 border border-cyan-500/40 shadow-sm"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
@@ -249,23 +278,23 @@ export default function DashboardPage() {
         {/* Ledger Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-900/80 border-b border-slate-800 uppercase tracking-wider text-[10px] text-slate-400 font-semibold">
+            <thead className="bg-slate-950/60 border-b border-slate-800/80 uppercase tracking-wider text-[11px] text-slate-400 font-bold">
               <tr>
-                <th className="px-4 py-3">Timestamp / Ref</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Source (Debit)</th>
-                <th className="px-4 py-3">Destination (Credit)</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-center">Risk Score</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-5 py-3.5">Reference / Time</th>
+                <th className="px-5 py-3.5">Type</th>
+                <th className="px-5 py-3.5">Source (Debit)</th>
+                <th className="px-5 py-3.5">Destination (Credit)</th>
+                <th className="px-5 py-3.5 text-right">Amount</th>
+                <th className="px-5 py-3.5 text-center">Status</th>
+                <th className="px-5 py-3.5 text-center">Risk Index</th>
+                <th className="px-5 py-3.5 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-sans">
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-slate-500">
-                    No transactions matching current criteria.
+                  <td colSpan={8} className="text-center py-16 text-slate-500 font-medium">
+                    No transactions matching current filters.
                   </td>
                 </tr>
               ) : (
@@ -277,12 +306,14 @@ export default function DashboardPage() {
                   return (
                     <tr
                       key={tx.id}
-                      className="hover:bg-slate-800/40 transition group"
+                      className="hover:bg-slate-800/30 transition duration-150 group"
                     >
                       {/* ID / Time */}
-                      <td className="px-4 py-3">
-                        <div className="font-mono text-slate-200">{tx.id.slice(0, 10)}...</div>
-                        <div className="text-[10px] text-slate-500">
+                      <td className="px-5 py-4">
+                        <div className="font-mono font-bold text-slate-200 text-xs tracking-tight">
+                          #{tx.id.slice(0, 8)}
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-mono mt-0.5">
                           {new Date(tx.createdAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -292,45 +323,59 @@ export default function DashboardPage() {
                       </td>
 
                       {/* Type */}
-                      <td className="px-4 py-3">
-                        <span className="text-[10px] px-2 py-0.5 rounded font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                      <td className="px-5 py-4">
+                        <span className="text-[10px] px-2.5 py-1 rounded-md font-mono font-bold uppercase tracking-wider bg-slate-900 border border-slate-700/80 text-cyan-300">
                           {tx.type}
                         </span>
                       </td>
 
                       {/* Source */}
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-white">
-                          {tx.sourceAccount.accountName}
-                        </div>
-                        <div className="font-mono text-[10px] text-slate-500">
-                          {tx.sourceAccount.accountNumber}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-900 to-slate-800 border border-cyan-800/40 flex items-center justify-center font-bold text-[10px] text-cyan-300">
+                            {getInitials(tx.sourceAccount.accountName)}
+                          </div>
+                          <div>
+                            <div className="font-bold text-white text-xs">
+                              {tx.sourceAccount.accountName}
+                            </div>
+                            <div className="font-mono text-[10px] text-slate-400">
+                              {tx.sourceAccount.accountNumber}
+                            </div>
+                          </div>
                         </div>
                       </td>
 
                       {/* Destination */}
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-white">
-                          {tx.destinationAccount.accountName}
-                        </div>
-                        <div className="font-mono text-[10px] text-slate-500">
-                          {tx.destinationAccount.accountNumber}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-blue-900 to-slate-800 border border-blue-800/40 flex items-center justify-center font-bold text-[10px] text-blue-300">
+                            {getInitials(tx.destinationAccount.accountName)}
+                          </div>
+                          <div>
+                            <div className="font-bold text-white text-xs">
+                              {tx.destinationAccount.accountName}
+                            </div>
+                            <div className="font-mono text-[10px] text-slate-400">
+                              {tx.destinationAccount.accountNumber}
+                            </div>
+                          </div>
                         </div>
                       </td>
 
                       {/* Amount */}
-                      <td className="px-4 py-3 text-right font-mono font-bold text-white">
+                      <td className="px-5 py-4 text-right font-mono font-extrabold text-sm text-white">
                         ฿{Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
 
                       {/* Status */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-5 py-4 text-center">
                         <span
-                          className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
                             tx.status === "APPROVED"
-                              ? "bg-emerald-950/70 text-emerald-400 border border-emerald-800/40"
+                              ? "bg-emerald-950/80 text-emerald-300 border border-emerald-700/60"
                               : tx.status === "FLAGGED"
-                              ? "bg-rose-950/70 text-rose-400 border border-rose-800/40 animate-pulse"
+                              ? "bg-rose-950/80 text-rose-300 border border-rose-700/60 animate-pulse"
                               : "bg-slate-800 text-slate-300 border border-slate-700"
                           }`}
                         >
@@ -348,10 +393,10 @@ export default function DashboardPage() {
                       </td>
 
                       {/* Risk Score Pill */}
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-5 py-4 text-center">
                         <span
-                          title={tx.riskReason ?? "Standard low risk"}
-                          className={`inline-block px-2.5 py-0.5 rounded-full font-mono text-[11px] font-bold ${
+                          title={tx.riskReason ?? "Standard low risk parameters"}
+                          className={`inline-block px-3 py-1 rounded-full font-mono text-xs font-bold tracking-tight ${
                             isHigh
                               ? "risk-pill-high"
                               : isMed
@@ -364,13 +409,13 @@ export default function DashboardPage() {
                       </td>
 
                       {/* Action */}
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-5 py-4 text-right">
                         <button
                           onClick={() => handleInspectInCopilot(tx)}
-                          className="inline-flex items-center space-x-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-cyan-900/60 hover:text-cyan-300 text-slate-300 text-[11px] font-medium transition cursor-pointer border border-slate-700"
+                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-cyan-950 hover:text-cyan-300 hover:border-cyan-500/40 text-slate-300 text-xs font-bold transition duration-200 cursor-pointer border border-slate-700"
                         >
                           <span>Copilot</span>
-                          <ExternalLink className="w-3 h-3" />
+                          <ExternalLink className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
