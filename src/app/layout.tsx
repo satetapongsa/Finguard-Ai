@@ -15,8 +15,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="min-h-screen bg-[#040810] text-slate-100 antialiased selection:bg-cyan-500 selection:text-white font-sans">
+    <html lang="th" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const savedTheme = localStorage.getItem('finguard_theme');
+                if (savedTheme === 'light') {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.add('light');
+                } else {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.classList.remove('light');
+                }
+              } catch (_) {}
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-screen text-foreground bg-background antialiased selection:bg-cyan-500 selection:text-white font-sans transition-colors duration-200">
         <div className="relative flex min-h-screen flex-col">
           {/* Subtle Ambient Top Glow */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-64 bg-gradient-to-b from-cyan-500/10 via-blue-500/5 to-transparent pointer-events-none blur-3xl -z-10" />

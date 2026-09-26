@@ -14,6 +14,8 @@ import {
   UserCheck,
   Activity,
   Server,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import type { RoleType } from "@/lib/types";
@@ -21,8 +23,8 @@ import type { RoleType } from "@/lib/types";
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
 
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [activeRole, setActiveRole] = useState<RoleType>("COMPLIANCE_OFFICER");
   const [dbStatus, setDbStatus] = useState<{
     connected: boolean;
@@ -35,6 +37,10 @@ export default function Navigation() {
   });
 
   useEffect(() => {
+    // Read saved theme
+    const savedTheme = (localStorage.getItem("finguard_theme") as "dark" | "light") || "dark";
+    setTheme(savedTheme);
+
     // Read active role from cookie
     const match = document.cookie.match(/(?:^|; )finguard_role=([^;]*)/);
     if (match && (match[1] === "ADMIN" || match[1] === "COMPLIANCE_OFFICER" || match[1] === "AUDITOR")) {
@@ -64,6 +70,19 @@ export default function Navigation() {
     setActiveRole(newRole);
     document.cookie = `finguard_role=${newRole}; path=/; max-age=86400; SameSite=Lax`;
     router.refresh();
+  };
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("finguard_theme", nextTheme);
+    if (nextTheme === "light") {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    }
   };
 
   const navItems = [
@@ -136,7 +155,7 @@ export default function Navigation() {
         </nav>
 
         {/* Action & Status Indicator */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2.5">
           {/* Neon Database Status Badge */}
           <div
             title={dbStatus.connected ? "Connected to PostgreSQL Database" : "Using High-Fidelity Simulation Ledger"}
@@ -171,14 +190,24 @@ export default function Navigation() {
             </select>
           </div>
 
-          {/* Quick Transfer Button */}
+          {/* Dark / Light Theme Toggle Button */}
           <button
-            onClick={() => setQuickTransferOpen(true)}
-            className="group relative flex items-center space-x-2 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/25 hover:shadow-cyan-500/40 transition duration-200 cursor-pointer"
+            onClick={toggleTheme}
+            aria-label="Toggle Dark or Light Mode"
+            title={theme === "dark" ? "เปลี่ยนเป็นธีมสว่าง (Light Mode)" : "เปลี่ยนเป็นธีมมืด (Dark Mode)"}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold transition cursor-pointer text-slate-300 hover:text-white"
           >
-            <PlusCircle className="w-4 h-4 transition-transform group-hover:rotate-90 duration-300" />
-            <span className="hidden sm:inline">Simulate Transfer</span>
-            <span className="sm:hidden">Transfer</span>
+            {theme === "dark" ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span className="hidden sm:inline text-[11px]">สว่าง</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-cyan-500" />
+                <span className="hidden sm:inline text-[11px]">มืด</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -205,11 +234,12 @@ export default function Navigation() {
           );
         })}
         <button
-          onClick={() => setQuickTransferOpen(true)}
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30"
+          onClick={toggleTheme}
+          aria-label="Toggle Theme"
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-slate-300 hover:text-white transition"
         >
-          <PlusCircle className="w-4 h-4 mb-0.5 text-emerald-400" />
-          <span>Simulate</span>
+          {theme === "dark" ? <Sun className="w-4 h-4 mb-0.5 text-amber-400" /> : <Moon className="w-4 h-4 mb-0.5 text-cyan-400" />}
+          <span>{theme === "dark" ? "สว่าง" : "มืด"}</span>
         </button>
       </div>
     </header>

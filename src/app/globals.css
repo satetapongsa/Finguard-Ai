@@ -11,6 +11,11 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+html:not(.dark), html.light {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -39,6 +44,116 @@ body {
   background-attachment: fixed;
   font-family: var(--font-sans);
   overflow-x: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Light Mode Overrides */
+html:not(.dark) body, html.light body {
+  color: #0f172a;
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
+}
+
+html:not(.dark) .glass-panel, html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .glass-card, html.light .glass-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .glass-card:hover, html.light .glass-card:hover {
+  border-color: rgba(14, 165, 233, 0.4);
+  box-shadow: 0 10px 25px -4px rgba(14, 165, 233, 0.12);
+}
+
+html:not(.dark) header, html.light header {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+html:not(.dark) footer, html.light footer {
+  background: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.1);
+  color: #64748b;
+}
+
+html:not(.dark) input, html:not(.dark) select, html:not(.dark) textarea,
+html.light input, html.light select, html.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) input::placeholder, html.light input::placeholder {
+  color: #94a3b8 !important;
+}
+
+html:not(.dark) .text-white, html.light .text-white {
+  color: #0f172a !important;
+}
+
+/* Ensure vibrant colored buttons, badges, and icons retain crisp white text in Light Mode */
+html:not(.dark) button[class*="bg-cyan-"],
+html:not(.dark) button[class*="bg-blue-"],
+html:not(.dark) button[class*="bg-emerald-"],
+html:not(.dark) button[class*="bg-rose-"],
+html:not(.dark) button[class*="bg-gradient-"],
+html:not(.dark) button[class*="from-cyan-"],
+html:not(.dark) button[class*="from-blue-"],
+html:not(.dark) button[class*="bg-gradient-"] *,
+html:not(.dark) button[class*="from-cyan-"] *,
+html:not(.dark) button[class*="from-blue-"] *,
+html:not(.dark) .badge-solid,
+html.light button[class*="bg-cyan-"],
+html.light button[class*="bg-blue-"],
+html.light button[class*="bg-emerald-"],
+html.light button[class*="bg-rose-"],
+html.light button[class*="bg-gradient-"],
+html.light button[class*="from-cyan-"],
+html.light button[class*="from-blue-"],
+html.light button[class*="bg-gradient-"] *,
+html.light button[class*="from-cyan-"] *,
+html.light button[class*="from-blue-"] *,
+html.light .badge-solid {
+  color: #ffffff !important;
+}
+
+html:not(.dark) .text-slate-100, html.light .text-slate-100 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-slate-300, html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .text-slate-400, html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .bg-slate-900, html.light .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .bg-slate-950, html.light .bg-slate-950 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .border-slate-800, html.light .border-slate-800 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .border-slate-700, html.light .border-slate-700 {
+  border-color: #cbd5e1 !important;
 }
 
 /* Typography Overrides */

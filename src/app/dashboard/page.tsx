@@ -286,13 +286,6 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-400" : ""}`} />
             <span>Sync Ledger</span>
           </button>
-          <button
-            onClick={() => setQuickTransferOpen(true)}
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/30 transition cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Simulate Transfer</span>
-          </button>
         </div>
       </div>
 
@@ -341,13 +334,6 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
           >
             <Server className="w-3.5 h-3.5 text-cyan-400" />
             <span>Neon Setup Guide</span>
-          </button>
-          <button
-            onClick={() => setQuickTransferOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 text-white text-xs font-bold border border-cyan-500/50 transition cursor-pointer"
-          >
-            <Zap className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Launch Simulation</span>
           </button>
         </div>
       </div>
@@ -459,13 +445,6 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setQuickTransferOpen(true)}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600/80 to-blue-600/80 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold border border-cyan-500/30 transition cursor-pointer self-start sm:self-auto"
-            >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span>Simulate Transfer Between Accounts</span>
-            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
