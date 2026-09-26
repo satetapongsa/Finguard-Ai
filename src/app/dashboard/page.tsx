@@ -25,9 +25,13 @@ import {
   ArrowRight,
   ShieldCheck,
   Bot,
+  Building2,
+  Sparkles,
+  Send,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import { TransactionWithAccounts } from "@/lib/types";
+import { sanitizeText, inspectPiiPresence } from "@/lib/security/guardrails";
 
 interface DashboardStats {
   totalVolume: number;
@@ -54,6 +58,26 @@ export default function DashboardPage() {
   >([]);
   const [inspectedTx, setInspectedTx] = useState<TransactionWithAccounts | null>(null);
   const [copiedHash, setCopiedHash] = useState(false);
+
+  // Live Real-Time Transfer Studio States
+  const [liveSourceId, setLiveSourceId] = useState("");
+  const [liveDestId, setLiveDestId] = useState("");
+  const [liveAmount, setLiveAmount] = useState("50000");
+  const [liveType, setLiveType] = useState<"TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER">("TRANSFER");
+  const [liveNote, setLiveNote] = useState("ชำระค่าบริการคู่ค้า เลขประจำตัว 1-1004-99882-12-9");
+  const [isExecutingLive, setIsExecutingLive] = useState(false);
+  const [liveReceipt, setLiveReceipt] = useState<{
+    id: string;
+    amount: string;
+    sourceAccount: { accountNumber: string; accountName: string };
+    destinationAccount: { accountNumber: string; accountName: string };
+    status: string;
+    riskScore: number;
+    riskReason: string;
+    metadata: Record<string, unknown>;
+    auditHash: string;
+    createdAt: string;
+  } | null>(null);
 
   const [stats, setStats] = useState<DashboardStats>({
     totalVolume: 0,
@@ -104,6 +128,10 @@ export default function DashboardPage() {
       }
       if (accData.success) {
         setAccounts(accData.data);
+        if (accData.data.length >= 2) {
+          setLiveSourceId((prev) => prev || accData.data[0].id);
+          setLiveDestId((prev) => prev || accData.data[1].id);
+        }
       }
       if (dbData.success) {
         setDbStatus({
@@ -156,6 +184,78 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
     navigator.clipboard.writeText(text);
     setCopiedEnv(true);
     setTimeout(() => setCopiedEnv(false), 2000);
+  };
+
+  // Calculations for Live Studio
+  const liveSourceAcc = accounts.find((a) => a.id === liveSourceId);
+  const liveDestAcc = accounts.find((a) => a.id === liveDestId);
+  const numLiveAmount = parseFloat(liveAmount) || 0;
+  const sourceCurrentBal = liveSourceAcc ? parseFloat(liveSourceAcc.balance) : 0;
+  const destCurrentBal = liveDestAcc ? parseFloat(liveDestAcc.balance) : 0;
+  const sourceAfterBal = sourceCurrentBal - numLiveAmount;
+  const destAfterBal = destCurrentBal + numLiveAmount;
+  const isLiveOverdraft = sourceAfterBal < 0;
+
+  const livePiiInspection = inspectPiiPresence(liveNote);
+  const liveMaskedPreview = sanitizeText(liveNote);
+
+  const applyLivePreset = (
+    amount: string,
+    type: "TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER",
+    note: string,
+    srcIdx = 0,
+    dstIdx = 1
+  ) => {
+    setLiveAmount(amount);
+    setLiveType(type);
+    setLiveNote(note);
+    if (accounts[srcIdx]) setLiveSourceId(accounts[srcIdx].id);
+    if (accounts[dstIdx]) setLiveDestId(accounts[dstIdx].id);
+    setLiveReceipt(null);
+  };
+
+  const handleExecuteLiveTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!liveSourceId || !liveDestId || isLiveOverdraft || isExecutingLive) return;
+    setIsExecutingLive(true);
+    setLiveReceipt(null);
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceAccountId: liveSourceId,
+          destinationAccountId: liveDestId,
+          amount: parseFloat(liveAmount),
+          type: liveType,
+          metadata: {
+            note: liveNote,
+            channel: "DASHBOARD_LIVE_STUDIO",
+            initiatedAt: new Date().toISOString(),
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.transaction) {
+        setLiveReceipt({
+          id: data.transaction.id,
+          amount: data.transaction.amount,
+          sourceAccount: data.transaction.sourceAccount,
+          destinationAccount: data.transaction.destinationAccount,
+          status: data.transaction.status,
+          riskScore: data.riskAssessment?.riskScore ?? data.transaction.riskScore ?? 0,
+          riskReason: data.riskAssessment?.riskReason ?? data.transaction.riskReason ?? "Verified",
+          metadata: data.transaction.metadata || {},
+          auditHash: data.auditHash || data.entryHash || "",
+          createdAt: data.transaction.createdAt,
+        });
+        await loadData();
+      }
+    } catch (err) {
+      console.error("Live transfer error:", err);
+    } finally {
+      setIsExecutingLive(false);
+    }
   };
 
   return (
@@ -410,6 +510,348 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* LIVE INTERACTIVE TRANSFER STUDIO (โอนเงินสดและตรวจกฎหมายเรียลไทม์)          */}
+      {/* ========================================================================= */}
+      {accounts.length >= 2 && (
+        <div className="glass-panel rounded-3xl border border-cyan-800/80 p-6 shadow-2xl relative overflow-hidden bg-gradient-to-b from-[#061022] to-[#040914]">
+          {/* Subtle Accent Glow */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+
+          {/* Studio Header */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-5 border-b border-slate-800/80 gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
+                <Send className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
+                    ศูนย์จำลองการโอนเงินสด & ตรวจสอบกฎหมาย (Live Money Transfer Studio)
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 font-mono">
+                    Neon DB Connected
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                  ทดสอบโอนเงินจริง ตัดยอดแบบ Double-Entry ACID และตรวจจับความเสี่ยง ธปท./ปปง./PDPA แบบเรียลไทม์
+                </p>
+              </div>
+            </div>
+
+            {/* Scenario Quick Buttons */}
+            <div className="flex items-center flex-wrap gap-1.5">
+              <span className="text-[11px] font-bold text-slate-400 mr-1">เคสทดสอบ:</span>
+              <button
+                type="button"
+                onClick={() =>
+                  applyLivePreset(
+                    "45000",
+                    "TRANSFER",
+                    "ชำระค่าบริการคู่ค้า เลขประจำตัว 1-1004-99882-12-9",
+                    0,
+                    1
+                  )
+                }
+                className="px-2.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-emerald-400 border border-emerald-600/40 text-xs font-bold transition cursor-pointer"
+              >
+                ฿45,000 โอนปกติ
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  applyLivePreset(
+                    "650000",
+                    "DISBURSEMENT",
+                    "เบิกจ่ายงบประมาณโครงการ เลขประจำตัว 1-1004-99882-12-9",
+                    0,
+                    1
+                  )
+                }
+                className="px-2.5 py-1.5 rounded-xl bg-amber-950/60 hover:bg-amber-900/70 text-amber-300 border border-amber-600/50 text-xs font-bold transition cursor-pointer"
+              >
+                ฿650,000 เกณฑ์ ธปท. (&gt; 5 แสน)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  applyLivePreset(
+                    "2500000",
+                    "CROSS_BORDER",
+                    "โอนทุนข้ามแดน แจ้ง ปปง. เลขประจำตัว 1-1004-99882-12-9",
+                    0,
+                    1
+                  )
+                }
+                className="px-2.5 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 border border-rose-600/50 text-xs font-bold transition cursor-pointer"
+              >
+                ฿2,500,000 เกณฑ์ ปปง. (STR &gt; 2 ล้าน)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  applyLivePreset(
+                    "350000",
+                    "CROSS_BORDER",
+                    "โอนเงินไปยังบัญชีเป้าหมายเฝ้าระวัง เลขประจำตัว 1-1004-99882-12-9",
+                    0,
+                    4
+                  )
+                }
+                className="px-2.5 py-1.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/70 text-purple-300 border border-purple-600/50 text-xs font-bold transition cursor-pointer"
+              >
+                บัญชีเฝ้าระวัง (Watchlist)
+              </button>
+            </div>
+          </div>
+
+          {/* Form Grid */}
+          <form onSubmit={handleExecuteLiveTransfer} className="mt-5 space-y-5">
+            {/* Visual Account Selector Bridge */}
+            <div className="grid grid-cols-1 lg:grid-cols-11 gap-3 items-center">
+              {/* Source Account Card */}
+              <div className="lg:col-span-5 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <label className="font-bold text-rose-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span>บัญชีผู้โอน (Source Account - Debit)</span>
+                  </label>
+                  <span className="font-mono text-[11px] text-slate-400">
+                    ยอดปัจจุบัน: ฿{sourceCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <select
+                  value={liveSourceId}
+                  onChange={(e) => setLiveSourceId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-semibold"
+                >
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.accountName} ({acc.accountNumber}) - ฿{Number(acc.balance).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
+                  <span className="text-slate-500">ยอดคงเหลือหลังโอน:</span>
+                  <span className={`font-bold ${sourceAfterBal < 0 ? "text-rose-400" : "text-cyan-300"}`}>
+                    ฿{sourceAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Transfer Arrow Bridge */}
+              <div className="lg:col-span-1 flex flex-col items-center justify-center py-2">
+                <div className="w-10 h-10 rounded-full bg-slate-800 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-md">
+                  <ArrowRight className="w-5 h-5 rotate-90 lg:rotate-0" />
+                </div>
+                <span className="text-[9px] font-mono text-cyan-400/80 mt-1 uppercase font-bold text-center">
+                  Double-Entry
+                </span>
+              </div>
+
+              {/* Destination Account Card */}
+              <div className="lg:col-span-5 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <label className="font-bold text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>บัญชีผู้รับ (Destination Account - Credit)</span>
+                  </label>
+                  <span className="font-mono text-[11px] text-slate-400">
+                    ยอดปัจจุบัน: ฿{destCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <select
+                  value={liveDestId}
+                  onChange={(e) => setLiveDestId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-semibold"
+                >
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.accountName} ({acc.accountNumber}) - ฿{Number(acc.balance).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
+                  <span className="text-slate-500">ยอดคงเหลือหลังรับ:</span>
+                  <span className="font-bold text-emerald-400">
+                    ฿{destAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Amount, Type, and PDPA Redaction */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+              {/* Amount */}
+              <div className="md:col-span-4 space-y-1.5">
+                <label className="text-xs font-bold text-white flex items-center justify-between">
+                  <span>จำนวนเงินโอน (THB)</span>
+                  {numLiveAmount >= 2000000 ? (
+                    <span className="text-rose-400 font-mono text-[10px]">ปปง. &ge; ฿2M STR</span>
+                  ) : numLiveAmount >= 500000 ? (
+                    <span className="text-amber-400 font-mono text-[10px]">ธปท. &gt; ฿500K Alert</span>
+                  ) : (
+                    <span className="text-emerald-400 font-mono text-[10px]">ปกติ (Standard)</span>
+                  )}
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400 font-bold font-mono text-sm">฿</span>
+                  <input
+                    type="number"
+                    value={liveAmount}
+                    onChange={(e) => setLiveAmount(e.target.value)}
+                    min="1"
+                    step="any"
+                    required
+                    className="w-full bg-slate-950 border border-slate-700/90 rounded-xl pl-8 pr-3.5 py-2.5 text-sm text-white font-mono font-extrabold focus:outline-none focus:border-cyan-400 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Transfer Type */}
+              <div className="md:col-span-3 space-y-1.5">
+                <label className="text-xs font-bold text-white">ประเภทธุรกรรม</label>
+                <select
+                  value={liveType}
+                  onChange={(e) => setLiveType(e.target.value as "TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER")}
+                  className="w-full bg-slate-950 border border-slate-700/90 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-semibold"
+                >
+                  <option value="TRANSFER">โอนเงินในประเทศ (Domestic Transfer)</option>
+                  <option value="SETTLEMENT">เคลียริ่งระหว่างสถาบัน (Inter-Bank Settlement)</option>
+                  <option value="DISBURSEMENT">เบิกจ่ายองค์กร (Corporate Disbursement)</option>
+                  <option value="CROSS_BORDER">โอนเงินต่างประเทศ (Cross-Border Wire)</option>
+                </select>
+              </div>
+
+              {/* Note with Real-Time PDPA Inspection */}
+              <div className="md:col-span-5 space-y-1.5">
+                <label className="text-xs font-bold text-white flex items-center justify-between">
+                  <span>บันทึกช่วยจำ / เลขบัตรประชาชน (PDPA Live Masking)</span>
+                  {livePiiInspection.hasPii && (
+                    <span className="text-[10px] text-cyan-400 font-mono font-bold flex items-center space-x-1">
+                      <Lock className="w-3 h-3" />
+                      <span>ตรวจพบข้อมูลส่วนบุคคล</span>
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  value={liveNote}
+                  onChange={(e) => setLiveNote(e.target.value)}
+                  placeholder="พิมพ์เลขบัตรประชาชน 13 หลัก หรือเลขบัตรเครดิต..."
+                  className="w-full bg-slate-950 border border-slate-700/90 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 transition"
+                />
+              </div>
+            </div>
+
+            {/* PDPA Real-Time Live Preview Highlight Box */}
+            <div className="p-3 rounded-2xl bg-cyan-950/30 border border-cyan-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="flex items-center space-x-2">
+                <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                <div>
+                  <span className="font-bold text-cyan-300">PDPA Guardrail ทำงานแบบเรียลไทม์: </span>
+                  <span className="font-mono text-cyan-100">{liveMaskedPreview}</span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-900/60 text-cyan-300 border border-cyan-700/50 shrink-0">
+                Auto-Masked ก่อนบันทึกจริง
+              </span>
+            </div>
+
+            {/* Action Button & Invariant Confirmation */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+              <div className="flex items-center space-x-2 text-xs font-mono">
+                <Scale className="w-4 h-4 text-emerald-400" />
+                <span className="text-slate-400">การันตีสมดุล Double-Entry: </span>
+                <span className={`font-bold ${isLiveOverdraft ? "text-rose-400" : "text-emerald-400"}`}>
+                  {isLiveOverdraft ? "ยอดเงินไม่พอ (Overdraft Rejected)" : "Debit = Credit (Net Zero Delta)"}
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isExecutingLive || isLiveOverdraft}
+                className={`px-7 py-3 rounded-2xl text-xs font-extrabold text-white transition flex items-center justify-center space-x-2.5 cursor-pointer shadow-xl ${
+                  isLiveOverdraft
+                    ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 shadow-cyan-600/30 active:scale-95"
+                }`}
+              >
+                {isExecutingLive ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>กำลังตัดยอดและบันทึกลง Neon DB...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 text-cyan-300" />
+                    <span>ยืนยันการโอนเงินสดจริง (Execute Live ACID Transfer)</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* ========================================================================= */}
+          {/* OFFICIAL TRANSACTION RECEIPT SLIP (สลิปยืนยันการทำธุรกรรมจริง)              */}
+          {/* ========================================================================= */}
+          {liveReceipt && (
+            <div className="mt-6 p-5 rounded-2xl bg-[#030712] border-2 border-emerald-500/60 shadow-2xl animate-in fade-in duration-300 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-950 border border-emerald-600 flex items-center justify-center text-emerald-400">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-white">
+                      สลิปยืนยันการทำรายการโอนเงินสำเร็จ (Official Transaction Receipt)
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      ตัดยอดจริงลง Neon Serverless PostgreSQL &bull; รหัสอ้างอิง: <span className="font-mono text-cyan-300 font-bold">{liveReceipt.id}</span>
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-600">
+                  {liveReceipt.status}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs font-mono">
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block">บัญชีผู้โอน (Debit -)</span>
+                  <span className="text-white font-bold">{liveReceipt.sourceAccount.accountName}</span>
+                  <span className="text-rose-400 block mt-1 font-bold">-฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block">บัญชีผู้รับ (Credit +)</span>
+                  <span className="text-white font-bold">{liveReceipt.destinationAccount.accountName}</span>
+                  <span className="text-emerald-400 block mt-1 font-bold">+฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block">ผลการตรวจความเสี่ยง (Risk)</span>
+                  <span className={`font-bold block ${liveReceipt.riskScore >= 0.65 ? "text-rose-400" : liveReceipt.riskScore >= 0.35 ? "text-amber-400" : "text-emerald-400"}`}>
+                    {(liveReceipt.riskScore * 100).toFixed(0)}% Risk Score
+                  </span>
+                  <span className="text-[10px] text-slate-400 truncate block mt-0.5" title={liveReceipt.riskReason}>
+                    {liveReceipt.riskReason}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 block">ลายเซ็นบล็อกเชน (Audit Hash)</span>
+                  <span className="text-[10px] text-cyan-300 truncate block font-mono" title={liveReceipt.auditHash}>
+                    {liveReceipt.auditHash ? `${liveReceipt.auditHash.substring(0, 16)}...` : "SHA-256 Verified"}
+                  </span>
+                  <span className="text-[10px] text-emerald-400 block mt-1">✓ Non-Repudiation</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

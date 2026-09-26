@@ -67,9 +67,9 @@ export default function Navigation() {
   };
 
   const navItems = [
-    { label: "Executive Dashboard", href: "/dashboard", icon: LayoutDashboard, badge: "Live" },
-    { label: "AI Compliance Copilot", href: "/compliance", icon: Bot, badge: "RAG" },
-    { label: "Immutable Audit Explorer", href: "/audit", icon: FileCheck, badge: "SHA-256" },
+    { label: "แดชบอร์ด & โอนเงิน (Dashboard)", href: "/dashboard", icon: LayoutDashboard, badge: "Live" },
+    { label: "ตรวจกฎหมาย AI (Compliance)", href: "/compliance", icon: Bot, badge: "BOT/AMLO" },
+    { label: "ประวัติบล็อกเชน (Audit)", href: "/audit", icon: FileCheck, badge: "SHA-256" },
   ];
 
   return (
