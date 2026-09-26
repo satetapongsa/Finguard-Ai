@@ -159,8 +159,8 @@ export default function QuickTransferModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-xl bg-[#080d1a] border border-slate-700/80 rounded-3xl p-6 sm:p-7 relative shadow-2xl shadow-cyan-950/40 text-slate-200 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-xl bg-white dark:bg-[#080d1a] border border-slate-200 dark:border-slate-700/80 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-800 dark:text-slate-200 max-h-[92vh] overflow-y-auto">
         {/* Glow accent */}
         <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-64 h-32 bg-cyan-500/15 blur-3xl pointer-events-none" />
 

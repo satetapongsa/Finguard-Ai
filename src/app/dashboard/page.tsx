@@ -290,7 +290,7 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
       </div>
 
       {/* Neon Database Connection & Simulation Action Bar */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 via-[#071328]/80 to-slate-900/90 border border-cyan-900/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-50/90 via-sky-50/80 to-blue-50/90 dark:from-slate-900/90 dark:via-[#071328]/80 dark:to-slate-900/90 border border-cyan-200/80 dark:border-cyan-900/40 shadow-sm dark:shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center space-x-3.5">
           <div
             className={`w-10 h-10 rounded-2xl flex items-center justify-center border shadow-md ${
@@ -496,7 +496,7 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
       {/* LIVE INTERACTIVE TRANSFER STUDIO (โอนเงินสดและตรวจกฎหมายเรียลไทม์)          */}
       {/* ========================================================================= */}
       {accounts.length >= 2 && (
-        <div className="glass-panel rounded-3xl border border-cyan-800/80 p-6 shadow-2xl relative overflow-hidden bg-gradient-to-b from-[#061022] to-[#040914]">
+        <div className="glass-panel rounded-3xl border border-slate-200 dark:border-cyan-800/80 p-6 shadow-xl dark:shadow-2xl relative overflow-hidden bg-white dark:bg-gradient-to-b dark:from-[#061022] dark:to-[#040914]">
           {/* Subtle Accent Glow */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
@@ -592,20 +592,20 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
             {/* Visual Account Selector Bridge */}
             <div className="grid grid-cols-1 lg:grid-cols-11 gap-3 items-center">
               {/* Source Account Card */}
-              <div className="lg:col-span-5 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+              <div className="lg:col-span-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <label className="font-bold text-rose-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <label className="font-bold text-rose-500 dark:text-rose-400 uppercase tracking-wider flex items-center space-x-1.5">
                     <Wallet className="w-3.5 h-3.5" />
                     <span>บัญชีผู้โอน (Source Account - Debit)</span>
                   </label>
-                  <span className="font-mono text-[11px] text-slate-400">
+                  <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
                     ยอดปัจจุบัน: ฿{sourceCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <select
                   value={liveSourceId}
                   onChange={(e) => setLiveSourceId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-semibold"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-semibold"
                 >
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
@@ -615,7 +615,7 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
                 </select>
                 <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
                   <span className="text-slate-500">ยอดคงเหลือหลังโอน:</span>
-                  <span className={`font-bold ${sourceAfterBal < 0 ? "text-rose-400" : "text-cyan-300"}`}>
+                  <span className={`font-bold ${sourceAfterBal < 0 ? "text-rose-500 dark:text-rose-400" : "text-cyan-700 dark:text-cyan-300"}`}>
                     ฿{sourceAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -623,29 +623,29 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
 
               {/* Transfer Arrow Bridge */}
               <div className="lg:col-span-1 flex flex-col items-center justify-center py-2">
-                <div className="w-10 h-10 rounded-full bg-slate-800 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-md">
+                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-cyan-500/40 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-sm dark:shadow-md">
                   <ArrowRight className="w-5 h-5 rotate-90 lg:rotate-0" />
                 </div>
-                <span className="text-[9px] font-mono text-cyan-400/80 mt-1 uppercase font-bold text-center">
+                <span className="text-[9px] font-mono text-cyan-600 dark:text-cyan-400/80 mt-1 uppercase font-bold text-center">
                   Double-Entry
                 </span>
               </div>
 
               {/* Destination Account Card */}
-              <div className="lg:col-span-5 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+              <div className="lg:col-span-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <label className="font-bold text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
+                  <label className="font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
                     <Building2 className="w-3.5 h-3.5" />
                     <span>บัญชีผู้รับ (Destination Account - Credit)</span>
                   </label>
-                  <span className="font-mono text-[11px] text-slate-400">
+                  <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
                     ยอดปัจจุบัน: ฿{destCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <select
                   value={liveDestId}
                   onChange={(e) => setLiveDestId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-400 font-semibold"
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-semibold"
                 >
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
@@ -655,7 +655,7 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
                 </select>
                 <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
                   <span className="text-slate-500">ยอดคงเหลือหลังรับ:</span>
-                  <span className="font-bold text-emerald-400">
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
                     ฿{destAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -778,55 +778,55 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
           {/* OFFICIAL TRANSACTION RECEIPT SLIP (สลิปยืนยันการทำธุรกรรมจริง)              */}
           {/* ========================================================================= */}
           {liveReceipt && (
-            <div className="mt-6 p-5 rounded-2xl bg-[#030712] border-2 border-emerald-500/60 shadow-2xl animate-in fade-in duration-300 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="mt-6 p-5 rounded-2xl bg-emerald-50/90 dark:bg-[#030712] border-2 border-emerald-400 dark:border-emerald-500/60 shadow-xl dark:shadow-2xl animate-in fade-in duration-300 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-emerald-200 dark:border-slate-800">
                 <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-full bg-emerald-950 border border-emerald-600 flex items-center justify-center text-emerald-400">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-600 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-sm text-white">
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
                       สลิปยืนยันการทำรายการโอนเงินสำเร็จ (Official Transaction Receipt)
                     </h3>
-                    <p className="text-[11px] text-slate-400">
-                      ตัดยอดจริงลง Neon Serverless PostgreSQL &bull; รหัสอ้างอิง: <span className="font-mono text-cyan-300 font-bold">{liveReceipt.id}</span>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                      ตัดยอดจริงลง Neon Serverless PostgreSQL &bull; รหัสอ้างอิง: <span className="font-mono text-cyan-700 dark:text-cyan-300 font-bold">{liveReceipt.id}</span>
                     </p>
                   </div>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-600">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600">
                   {liveReceipt.status}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs font-mono">
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
                   <span className="text-[10px] text-slate-500 block">บัญชีผู้โอน (Debit -)</span>
-                  <span className="text-white font-bold">{liveReceipt.sourceAccount.accountName}</span>
-                  <span className="text-rose-400 block mt-1 font-bold">-฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{liveReceipt.sourceAccount.accountName}</span>
+                  <span className="text-rose-500 dark:text-rose-400 block mt-1 font-bold">-฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
                   <span className="text-[10px] text-slate-500 block">บัญชีผู้รับ (Credit +)</span>
-                  <span className="text-white font-bold">{liveReceipt.destinationAccount.accountName}</span>
-                  <span className="text-emerald-400 block mt-1 font-bold">+฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{liveReceipt.destinationAccount.accountName}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 block mt-1 font-bold">+฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
                   <span className="text-[10px] text-slate-500 block">ผลการตรวจความเสี่ยง (Risk)</span>
-                  <span className={`font-bold block ${liveReceipt.riskScore >= 0.65 ? "text-rose-400" : liveReceipt.riskScore >= 0.35 ? "text-amber-400" : "text-emerald-400"}`}>
+                  <span className={`font-bold block ${liveReceipt.riskScore >= 0.65 ? "text-rose-500 dark:text-rose-400" : liveReceipt.riskScore >= 0.35 ? "text-amber-500 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                     {(liveReceipt.riskScore * 100).toFixed(0)}% Risk Score
                   </span>
-                  <span className="text-[10px] text-slate-400 truncate block mt-0.5" title={liveReceipt.riskReason}>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block mt-0.5" title={liveReceipt.riskReason}>
                     {liveReceipt.riskReason}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
                   <span className="text-[10px] text-slate-500 block">ลายเซ็นบล็อกเชน (Audit Hash)</span>
-                  <span className="text-[10px] text-cyan-300 truncate block font-mono" title={liveReceipt.auditHash}>
+                  <span className="text-[10px] text-cyan-700 dark:text-cyan-300 truncate block font-mono" title={liveReceipt.auditHash}>
                     {liveReceipt.auditHash ? `${liveReceipt.auditHash.substring(0, 16)}...` : "SHA-256 Verified"}
                   </span>
-                  <span className="text-[10px] text-emerald-400 block mt-1">✓ Non-Repudiation</span>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block mt-1">✓ Non-Repudiation</span>
                 </div>
               </div>
             </div>
@@ -1015,8 +1015,8 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
 
       {/* Transaction Details Inspection Modal */}
       {inspectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-[#080d1a] border border-cyan-700/60 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-200 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-white dark:bg-[#080d1a] border border-slate-200 dark:border-cyan-700/60 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-800 dark:text-slate-200 max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center space-x-3">
@@ -1169,8 +1169,8 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
 
       {/* Neon PostgreSQL Setup Guide Modal */}
       {showNeonModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-[#080d1a] border border-cyan-800/70 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-white dark:bg-[#080d1a] border border-slate-200 dark:border-cyan-800/70 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-800 dark:text-slate-200">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-2xl bg-cyan-950/80 border border-cyan-700/60 flex items-center justify-center text-cyan-400">

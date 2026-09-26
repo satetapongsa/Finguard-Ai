@@ -47,46 +47,56 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* Light Mode Overrides */
+/* Comprehensive Light Theme Token Overrides */
 html:not(.dark) body, html.light body {
   color: #0f172a;
   background-color: #f8fafc;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.06) 0px, transparent 50%),
     radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
 }
 
+/* Glass Panels & Surfaces */
 html:not(.dark) .glass-panel, html.light .glass-panel {
-  background: rgba(255, 255, 255, 0.92);
+  background: #ffffff !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  box-shadow: 0 10px 30px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06) !important;
 }
 
 html:not(.dark) .glass-card, html.light .glass-card {
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 12px -2px rgba(15, 23, 42, 0.05) !important;
 }
 
 html:not(.dark) .glass-card:hover, html.light .glass-card:hover {
-  border-color: rgba(14, 165, 233, 0.4);
-  box-shadow: 0 10px 25px -4px rgba(14, 165, 233, 0.12);
+  border-color: #38bdf8 !important;
+  box-shadow: 0 10px 25px -4px rgba(14, 165, 233, 0.12) !important;
 }
 
+/* Navigation & Mobile Dock */
 html:not(.dark) header, html.light header {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 4px 0 rgba(15, 23, 42, 0.04) !important;
+}
+
+html:not(.dark) .fixed.bottom-0, html.light .fixed.bottom-0 {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 -4px 20px 0 rgba(15, 23, 42, 0.06) !important;
 }
 
 html:not(.dark) footer, html.light footer {
-  background: #f1f5f9;
-  border-color: rgba(15, 23, 42, 0.1);
-  color: #64748b;
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #64748b !important;
 }
 
+/* Form Controls & Inputs */
 html:not(.dark) input, html:not(.dark) select, html:not(.dark) textarea,
 html.light input, html.light select, html.light textarea {
   background-color: #ffffff !important;
@@ -98,37 +108,117 @@ html:not(.dark) input::placeholder, html.light input::placeholder {
   color: #94a3b8 !important;
 }
 
+/* Code & Pre Blocks */
+html:not(.dark) pre, html.light pre,
+html:not(.dark) code, html.light code {
+  background-color: #f1f5f9 !important;
+  color: #0369a1 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Table Elements */
+html:not(.dark) table thead, html.light table thead {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) table thead th, html.light table thead th {
+  color: #475569 !important;
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) table tbody tr, html.light table tbody tr {
+  border-color: #f1f5f9 !important;
+}
+
+html:not(.dark) table tbody tr:hover, html.light table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Dark Container Replacements (Catching all Tailwind opacity permutations) */
+html:not(.dark) [class*="bg-[#040810]"], html.light [class*="bg-[#040810]"],
+html:not(.dark) [class*="bg-[#03060c]"], html.light [class*="bg-[#03060c]"],
+html:not(.dark) [class*="bg-[#080d1a]"], html.light [class*="bg-[#080d1a]"],
+html:not(.dark) [class*="bg-[#030712]"], html.light [class*="bg-[#030712]"],
+html:not(.dark) [class*="bg-[#061022]"], html.light [class*="bg-[#061022]"],
+html:not(.dark) [class*="bg-[#040914]"], html.light [class*="bg-[#040914]"] {
+  background-color: #ffffff !important;
+}
+
+/* Modal Backdrops */
+html:not(.dark) [class*="bg-black/"], html.light [class*="bg-black/"] {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* Dark Gradients Inversion */
+html:not(.dark) [class*="from-[#061022]"], html.light [class*="from-[#061022]"] {
+  --tw-gradient-from: #ffffff var(--tw-gradient-from-position) !important;
+}
+
+html:not(.dark) [class*="to-[#040914]"], html.light [class*="to-[#040914]"] {
+  --tw-gradient-to: #f8fafc var(--tw-gradient-to-position) !important;
+}
+
+html:not(.dark) [class*="from-cyan-950"], html.light [class*="from-cyan-950"],
+html:not(.dark) [class*="from-cyan-900"], html.light [class*="from-cyan-900"] {
+  --tw-gradient-from: #e0f2fe var(--tw-gradient-from-position) !important;
+}
+
+html:not(.dark) [class*="to-slate-800"], html.light [class*="to-slate-800"] {
+  --tw-gradient-to: #f1f5f9 var(--tw-gradient-to-position) !important;
+}
+
+html:not(.dark) [class*="bg-slate-950"], html.light [class*="bg-slate-950"] {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) [class*="bg-slate-900"], html.light [class*="bg-slate-900"] {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) [class*="bg-slate-800"], html.light [class*="bg-slate-800"] {
+  background-color: #e2e8f0 !important;
+}
+
+/* Border Overrides */
+html:not(.dark) [class*="border-slate-800"], html.light [class*="border-slate-800"],
+html:not(.dark) [class*="border-slate-700"], html.light [class*="border-slate-700"] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Colored Badge & Pill Replacements in Light Mode */
+html:not(.dark) [class*="bg-cyan-950"], html.light [class*="bg-cyan-950"] {
+  background-color: #e0f2fe !important;
+  color: #0369a1 !important;
+  border-color: #7dd3fc !important;
+}
+
+html:not(.dark) [class*="bg-emerald-950"], html.light [class*="bg-emerald-950"] {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #6ee7b7 !important;
+}
+
+html:not(.dark) [class*="bg-rose-950"], html.light [class*="bg-rose-950"] {
+  background-color: #ffe4e6 !important;
+  color: #9f1239 !important;
+  border-color: #fca5a5 !important;
+}
+
+html:not(.dark) [class*="bg-amber-950"], html.light [class*="bg-amber-950"] {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #fcd34d !important;
+}
+
+/* Text Contrasts */
 html:not(.dark) .text-white, html.light .text-white {
   color: #0f172a !important;
 }
 
-/* Ensure vibrant colored buttons, badges, and icons retain crisp white text in Light Mode */
-html:not(.dark) button[class*="bg-cyan-"],
-html:not(.dark) button[class*="bg-blue-"],
-html:not(.dark) button[class*="bg-emerald-"],
-html:not(.dark) button[class*="bg-rose-"],
-html:not(.dark) button[class*="bg-gradient-"],
-html:not(.dark) button[class*="from-cyan-"],
-html:not(.dark) button[class*="from-blue-"],
-html:not(.dark) button[class*="bg-gradient-"] *,
-html:not(.dark) button[class*="from-cyan-"] *,
-html:not(.dark) button[class*="from-blue-"] *,
-html:not(.dark) .badge-solid,
-html.light button[class*="bg-cyan-"],
-html.light button[class*="bg-blue-"],
-html.light button[class*="bg-emerald-"],
-html.light button[class*="bg-rose-"],
-html.light button[class*="bg-gradient-"],
-html.light button[class*="from-cyan-"],
-html.light button[class*="from-blue-"],
-html.light button[class*="bg-gradient-"] *,
-html.light button[class*="from-cyan-"] *,
-html.light button[class*="from-blue-"] *,
-html.light .badge-solid {
-  color: #ffffff !important;
-}
-
-html:not(.dark) .text-slate-100, html.light .text-slate-100 {
+html:not(.dark) .text-slate-100, html.light .text-slate-100,
+html:not(.dark) .text-slate-200, html.light .text-slate-200 {
   color: #0f172a !important;
 }
 
@@ -140,20 +230,42 @@ html:not(.dark) .text-slate-400, html.light .text-slate-400 {
   color: #64748b !important;
 }
 
-html:not(.dark) .bg-slate-900, html.light .bg-slate-900 {
-  background-color: #f1f5f9 !important;
+html:not(.dark) .text-slate-500, html.light .text-slate-500 {
+  color: #64748b !important;
 }
 
-html:not(.dark) .bg-slate-950, html.light .bg-slate-950 {
-  background-color: #f8fafc !important;
-}
-
-html:not(.dark) .border-slate-800, html.light .border-slate-800 {
-  border-color: #e2e8f0 !important;
-}
-
-html:not(.dark) .border-slate-700, html.light .border-slate-700 {
-  border-color: #cbd5e1 !important;
+/* Preserve crisp white text on vibrant action buttons and gradient pills */
+html:not(.dark) button[class*="bg-cyan-"],
+html:not(.dark) button[class*="bg-blue-"],
+html:not(.dark) button[class*="bg-emerald-"],
+html:not(.dark) button[class*="bg-rose-"],
+html:not(.dark) button[class*="bg-gradient-"],
+html:not(.dark) button[class*="from-cyan-"],
+html:not(.dark) button[class*="from-blue-"],
+html:not(.dark) button[class*="bg-gradient-"] *,
+html:not(.dark) button[class*="from-cyan-"] *,
+html:not(.dark) button[class*="from-blue-"] *,
+html:not(.dark) a[class*="bg-gradient-"],
+html:not(.dark) a[class*="bg-gradient-"] *,
+html:not(.dark) .btn-primary,
+html:not(.dark) .btn-primary *,
+html:not(.dark) .badge-solid,
+html.light button[class*="bg-cyan-"],
+html.light button[class*="bg-blue-"],
+html.light button[class*="bg-emerald-"],
+html.light button[class*="bg-rose-"],
+html.light button[class*="bg-gradient-"],
+html.light button[class*="from-cyan-"],
+html.light button[class*="from-blue-"],
+html.light button[class*="bg-gradient-"] *,
+html.light button[class*="from-cyan-"] *,
+html.light button[class*="from-blue-"] *,
+html.light a[class*="bg-gradient-"],
+html.light a[class*="bg-gradient-"] *,
+html.light .btn-primary,
+html.light .btn-primary *,
+html.light .badge-solid {
+  color: #ffffff !important;
 }
 
 /* Typography Overrides */

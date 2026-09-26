@@ -92,7 +92,7 @@ export default function Navigation() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-[#040810]/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-[#040810]/90 backdrop-blur-xl transition-colors duration-200 shadow-sm dark:shadow-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
         {/* Brand / Logo */}
         <Link href="/dashboard" className="flex items-center space-x-3.5 group">
@@ -107,21 +107,21 @@ export default function Navigation() {
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-lg text-white tracking-tight">
-                FinGuard <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">AI</span>
+              <span className="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight">
+                FinGuard <span className="bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">AI</span>
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-700/50">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/90 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-700/50">
                 BFSI Enterprise
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium hidden sm:block">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
               Autonomous Compliance & Transaction Intelligence
             </p>
           </div>
         </Link>
 
         {/* Navigation Tabs */}
-        <nav className="hidden md:flex items-center space-x-1.5 p-1 rounded-xl bg-slate-900/60 border border-slate-800/80">
+        <nav className="hidden md:flex items-center space-x-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -132,18 +132,18 @@ export default function Navigation() {
                 prefetch={true}
                 className={`relative flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
                   isActive
-                    ? "bg-gradient-to-r from-cyan-950/80 to-slate-800 text-cyan-300 border border-cyan-500/30 shadow-sm shadow-cyan-500/10"
-                    : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50"
+                    ? "bg-white dark:bg-gradient-to-r dark:from-cyan-950/80 dark:to-slate-800 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? "text-cyan-400" : "text-slate-400"}`} />
+                <Icon className={`w-4 h-4 ${isActive ? "text-cyan-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"}`} />
                 <span>{item.label}</span>
                 {item.badge && (
                   <span
                     className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
                       isActive
-                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
-                        : "bg-slate-800 text-slate-400"
+                        ? "bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30"
+                        : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400"
                     }`}
                   >
                     {item.badge}
@@ -161,13 +161,13 @@ export default function Navigation() {
             title={dbStatus.connected ? "Connected to Neon Serverless PostgreSQL" : "Connecting to Neon Database..."}
             className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
               dbStatus.connected
-                ? "bg-emerald-950/70 border-emerald-700/60 text-emerald-300"
-                : "bg-amber-950/70 border-amber-700/60 text-amber-300"
+                ? "bg-emerald-50 dark:bg-emerald-950/70 border-emerald-200 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-300"
+                : "bg-amber-50 dark:bg-amber-950/70 border-amber-200 dark:border-amber-700/60 text-amber-800 dark:text-amber-300"
             }`}
           >
             <span
               className={`w-2 h-2 rounded-full ${
-                dbStatus.connected ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-pulse"
+                dbStatus.connected ? "bg-emerald-500 animate-pulse" : "bg-amber-500 animate-pulse"
               }`}
             />
             <span className="font-mono text-[10px]">
@@ -176,17 +176,17 @@ export default function Navigation() {
           </div>
 
           {/* RBAC Role Switcher */}
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium">
-            <UserCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold hidden sm:inline">Role:</span>
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs font-medium">
+            <UserCheck className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold hidden sm:inline">Role:</span>
             <select
               value={activeRole}
               onChange={(e) => handleRoleChange(e.target.value as RoleType)}
-              className="bg-transparent text-cyan-300 text-xs font-bold focus:outline-none cursor-pointer"
+              className="bg-transparent text-cyan-700 dark:text-cyan-300 text-xs font-bold focus:outline-none cursor-pointer"
             >
-              <option value="ADMIN" className="bg-slate-900 text-white">ADMIN</option>
-              <option value="COMPLIANCE_OFFICER" className="bg-slate-900 text-white">OFFICER</option>
-              <option value="AUDITOR" className="bg-slate-900 text-white">AUDITOR (Read-only)</option>
+              <option value="ADMIN" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">ADMIN</option>
+              <option value="COMPLIANCE_OFFICER" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">OFFICER</option>
+              <option value="AUDITOR" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">AUDITOR (Read-only)</option>
             </select>
           </div>
 
@@ -195,7 +195,7 @@ export default function Navigation() {
             onClick={toggleTheme}
             aria-label="Toggle Dark or Light Mode"
             title={theme === "dark" ? "เปลี่ยนเป็นธีมสว่าง (Light Mode)" : "เปลี่ยนเป็นธีมมืด (Dark Mode)"}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold transition cursor-pointer text-slate-300 hover:text-white"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-xs font-bold transition cursor-pointer text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
           >
             {theme === "dark" ? (
               <>
@@ -204,7 +204,7 @@ export default function Navigation() {
               </>
             ) : (
               <>
-                <Moon className="w-4 h-4 text-cyan-500" />
+                <Moon className="w-4 h-4 text-cyan-600" />
                 <span className="hidden sm:inline text-[11px]">มืด</span>
               </>
             )}
@@ -213,7 +213,7 @@ export default function Navigation() {
       </div>
 
       {/* Mobile Floating Bottom Navigation Dock */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#040810]/95 backdrop-blur-xl border-t border-slate-800/90 px-3 py-2 flex items-center justify-around shadow-2xl">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#040810]/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/90 px-3 py-2 flex items-center justify-around shadow-lg dark:shadow-2xl">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -224,8 +224,8 @@ export default function Navigation() {
               prefetch={true}
               className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition-all duration-150 ${
                 isActive
-                  ? "text-cyan-400 bg-cyan-950/50 border border-cyan-500/30"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/50 border border-cyan-200 dark:border-cyan-500/30"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               <Icon className="w-4 h-4 mb-0.5" />
@@ -236,9 +236,9 @@ export default function Navigation() {
         <button
           onClick={toggleTheme}
           aria-label="Toggle Theme"
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-slate-300 hover:text-white transition"
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition"
         >
-          {theme === "dark" ? <Sun className="w-4 h-4 mb-0.5 text-amber-400" /> : <Moon className="w-4 h-4 mb-0.5 text-cyan-400" />}
+          {theme === "dark" ? <Sun className="w-4 h-4 mb-0.5 text-amber-400" /> : <Moon className="w-4 h-4 mb-0.5 text-cyan-600" />}
           <span>{theme === "dark" ? "สว่าง" : "มืด"}</span>
         </button>
       </div>

@@ -46,21 +46,21 @@ export default function RootLayout({
           <QuickTransferModal />
 
           {/* Footer */}
-          <footer className="border-t border-slate-800/80 bg-[#03060c] py-6 text-xs text-slate-400">
+          <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-[#03060c] py-6 text-xs text-slate-500 dark:text-slate-400 transition-colors duration-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center space-x-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-semibold text-slate-300">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
                   FinGuard AI Autonomous Compliance Engine
                 </span>
-                <span className="text-slate-600">&bull;</span>
-                <span className="text-slate-400">Bank of Thailand & AMLO Framework</span>
+                <span className="text-slate-400 dark:text-slate-600">&bull;</span>
+                <span className="text-slate-500 dark:text-slate-400">Bank of Thailand & AMLO Framework</span>
               </div>
-              <div className="font-mono text-[11px] text-slate-400 flex items-center space-x-2">
-                <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+              <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-2">
+                <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-sm dark:shadow-none">
                   Double-Entry Invariant: Verified
                 </span>
-                <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-sm dark:shadow-none">
                   SHA-256 Non-Repudiation
                 </span>
               </div>
