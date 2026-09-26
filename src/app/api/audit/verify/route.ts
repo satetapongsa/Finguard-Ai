@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { verifyAuditChain } from "@/lib/security/guardrails";
-import { simLedgerStore } from "@/lib/ledger/simulation-store";
 
 /**
  * GET /api/audit/verify
@@ -31,26 +30,15 @@ export async function GET() {
       verified: report.isValid,
       report,
     });
-  } catch (_error) {
-    const simLogs = simLedgerStore.getAuditLogs(100);
-    const report = verifyAuditChain(
-      simLogs.map((l) => ({
-        id: l.id,
-        previousHash: l.previousHash,
-        entryHash: l.entryHash,
-        payloadHash: l.payloadHash,
-        actionType: l.actionType,
-        targetResource: l.targetResource,
-        resourceId: l.resourceId,
-        createdAt: l.createdAt,
-      }))
+  } catch (error) {
+    console.error("Failed to verify audit chain from database:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to verify audit chain from Neon PostgreSQL database",
+        details: error instanceof Error ? error.message : "Database error",
+      },
+      { status: 500 }
     );
-
-    return NextResponse.json({
-      success: true,
-      verified: report.isValid,
-      report,
-      isSimulation: true,
-    });
   }
 }

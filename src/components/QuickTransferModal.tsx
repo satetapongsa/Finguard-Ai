@@ -125,7 +125,7 @@ export default function QuickTransferModal() {
           type,
           metadata: {
             note,
-            channel: "BFSI_SIMULATOR_PORTAL",
+            channel: "BFSI_PORTAL",
             initiatedAt: new Date().toISOString(),
           },
         }),

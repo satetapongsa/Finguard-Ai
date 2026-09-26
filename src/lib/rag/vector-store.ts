@@ -116,36 +116,8 @@ export async function searchPolicies(params: {
     });
 
     return defaults.map((m) => ({ ...m, similarity: 0.85 }));
-  } catch (_dbErr) {
-    // 3. Resilient In-Memory BFSI Standard Directives (for isolated headless testing)
-    return [
-      {
-        id: "pol-fallback-1",
-        code: "BOT-NO-12/2566",
-        title: "Bank of Thailand Guidelines on High-Value Digital Fund Transfers",
-        category: "AML",
-        rawContent:
-          "Financial institutions must implement real-time anomaly detection for transactions exceeding 500,000 THB. Rapid multiple transfers exceeding 2,000,000 THB cumulative within 24 hours require mandatory Suspicious Transaction Report (STR) filing within 7 business days.",
-        similarity: 0.95,
-      },
-      {
-        id: "pol-fallback-2",
-        code: "AMLO-SEC-2024-01",
-        title: "Anti-Money Laundering Office Electronic Monitoring Directives",
-        category: "AML",
-        rawContent:
-          "Cross-border outbound settlements must undergo screening against designated sanction lists. Any detected account under investigation must trigger immediate transaction holding and officer review.",
-        similarity: 0.90,
-      },
-      {
-        id: "pol-fallback-3",
-        code: "PDPA-SEC-2562",
-        title: "Personal Data Protection Act B.E. 2562 Financial Sector Guardrails",
-        category: "PDPA",
-        rawContent:
-          "Customer national identification numbers, unmasked credit card PANs, and unredacted biometric or contact logs shall not be stored in unencrypted form or passed to external third-party model inference endpoints without explicit masking.",
-        similarity: 0.88,
-      },
-    ];
+  } catch (error) {
+    console.error("Vector search failed to query database:", error);
+    return [];
   }
 }

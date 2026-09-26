@@ -61,7 +61,7 @@ export default function Navigation() {
       .catch(() => {
         setDbStatus({
           connected: false,
-          provider: "Simulation Ledger Engine",
+          provider: "Neon PostgreSQL",
         });
       });
   }, []);
@@ -158,7 +158,7 @@ export default function Navigation() {
         <div className="flex items-center space-x-2.5">
           {/* Neon Database Status Badge */}
           <div
-            title={dbStatus.connected ? "Connected to PostgreSQL Database" : "Using High-Fidelity Simulation Ledger"}
+            title={dbStatus.connected ? "Connected to Neon Serverless PostgreSQL" : "Connecting to Neon Database..."}
             className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
               dbStatus.connected
                 ? "bg-emerald-950/70 border-emerald-700/60 text-emerald-300"
@@ -167,11 +167,11 @@ export default function Navigation() {
           >
             <span
               className={`w-2 h-2 rounded-full ${
-                dbStatus.connected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+                dbStatus.connected ? "bg-emerald-400 animate-pulse" : "bg-amber-400 animate-pulse"
               }`}
             />
             <span className="font-mono text-[10px]">
-              {dbStatus.connected ? "Neon DB: Online" : "Neon: Simulator Ready"}
+              {dbStatus.connected ? "Neon DB: Online" : "Neon DB: Connecting"}
             </span>
           </div>
 

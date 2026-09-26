@@ -8,7 +8,6 @@ import {
   GENESIS_PREV_HASH,
   verifyAuditChain,
 } from "@/lib/security/guardrails";
-import { simLedgerStore } from "@/lib/ledger/simulation-store";
 
 /**
  * GET /api/audit
@@ -82,27 +81,15 @@ export async function GET(request: NextRequest) {
       data: formattedLogs,
       verification: chainReport,
     });
-  } catch (_error) {
-    const logs = simLedgerStore.getAuditLogs(limit, status || undefined);
-    const verification = verifyAuditChain(
-      logs.map((l) => ({
-        id: l.id,
-        previousHash: l.previousHash,
-        entryHash: l.entryHash,
-        payloadHash: l.payloadHash,
-        actionType: l.actionType,
-        targetResource: l.targetResource,
-        resourceId: l.resourceId,
-        createdAt: l.createdAt,
-      }))
+  } catch (error) {
+    console.error("Failed to fetch audit logs from database:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch audit logs from Neon PostgreSQL database",
+        details: error instanceof Error ? error.message : "Database error",
+      },
+      { status: 500 }
     );
-
-    return NextResponse.json({
-      success: true,
-      count: logs.length,
-      data: logs,
-      verification,
-      isSimulation: true,
-    });
   }
 }

@@ -56,18 +56,14 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Failed to load stats:", error);
-    // Return sample figures if db is initializing
-    return NextResponse.json({
-      success: true,
-      data: {
-        totalVolume: 48920500.0,
-        transactionCount: 1420,
-        verifiedLedgerBalance: 125840000.0,
-        highRiskFlags: 14,
-        activeComplianceAlerts: 8,
-        recentTransactions: [],
+    console.error("Failed to load stats from database:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to compute stats from Neon PostgreSQL database",
+        details: error instanceof Error ? error.message : "Database error",
       },
-    });
+      { status: 500 }
+    );
   }
 }

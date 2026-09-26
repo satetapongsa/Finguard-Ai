@@ -32,13 +32,11 @@ export async function GET() {
     });
   } catch (error) {
     return NextResponse.json({
-      success: true,
+      success: false,
       connected: false,
-      provider: isNeon ? "Neon PostgreSQL (Connecting...)" : "Simulation Ledger Engine",
-      mode: "STANDALONE_SIMULATOR",
-      message:
-        "Running in high-fidelity in-memory simulator mode. To connect Neon, set DATABASE_URL and DIRECT_URL in .env and run 'npm run db:setup'.",
-      details: error instanceof Error ? error.message : "Database offline",
+      provider: isNeon ? "Neon PostgreSQL" : "PostgreSQL Database",
+      message: "Database connection unreachable. Verify DATABASE_URL in environment variables.",
+      details: error instanceof Error ? error.message : "Database connection offline",
     });
   }
 }

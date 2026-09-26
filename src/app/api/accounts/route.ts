@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { simLedgerStore } from "@/lib/ledger/simulation-store";
 
 export async function GET() {
   try {
@@ -23,11 +22,15 @@ export async function GET() {
         balance: acc.balance.toString(),
       })),
     });
-  } catch (_error) {
-    // Return live in-memory accounts state (reflects simulation transfers)
-    return NextResponse.json({
-      success: true,
-      data: simLedgerStore.getAccounts(),
-    });
+  } catch (error) {
+    console.error("Failed to fetch accounts from database:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch accounts from Neon PostgreSQL database",
+        details: error instanceof Error ? error.message : "Database error",
+      },
+      { status: 500 }
+    );
   }
 }

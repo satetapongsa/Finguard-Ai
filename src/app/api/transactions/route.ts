@@ -9,7 +9,6 @@ import {
   GENESIS_PREV_HASH,
 } from "@/lib/security/guardrails";
 import { evaluateTransactionRisk } from "@/lib/risk/engine";
-import { simLedgerStore } from "@/lib/ledger/simulation-store";
 
 /**
  * GET /api/transactions
@@ -52,14 +51,16 @@ export async function GET(request: NextRequest) {
       count: serializedTransactions.length,
       data: serializedTransactions,
     });
-  } catch (_error) {
-    const simTxs = simLedgerStore.getTransactions(limit, status || undefined);
-    return NextResponse.json({
-      success: true,
-      count: simTxs.length,
-      data: simTxs,
-      isSimulation: true,
-    });
+  } catch (error) {
+    console.error("Failed to query transactions from database:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to query transactions from Neon PostgreSQL database",
+        details: error instanceof Error ? error.message : "Database error",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        return createdTx;
+        return { ...createdTx, entryHash };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -297,6 +298,7 @@ export async function POST(request: NextRequest) {
         },
         riskAssessment,
         auditHash: payloadHash,
+        entryHash: result.entryHash,
       },
       { status: 201 }
     );
@@ -335,63 +337,6 @@ export async function POST(request: NextRequest) {
       });
     } catch (_auditErr) {
       // Ignore fallback log error
-    }
-
-    const isDbConnectionError =
-      message.includes("Can't reach database server") ||
-      message.includes("database server") ||
-      message.includes("PrismaClientInitializationError") ||
-      message.includes("timed out") ||
-      message.includes("ECONNREFUSED");
-
-    if (isDbConnectionError) {
-      try {
-        const simResult = simLedgerStore.executeSimulatedTransfer({
-          sourceAccountId,
-          destinationAccountId,
-          amount,
-          currency,
-          type,
-          metadata: sanitizedMetadata as Record<string, unknown> | null,
-          ipAddress,
-        });
-
-        return NextResponse.json(
-          {
-            success: true,
-            isSimulation: true,
-            message:
-              simResult.transaction.status === "FLAGGED"
-                ? "Simulated ACID transfer executed & held for AML review (Connect Neon to persist)"
-                : "Simulated ACID transfer settled to ledger (Connect Neon in .env to persist)",
-            transaction: simResult.transaction,
-            riskAssessment: simResult.riskAssessment,
-            auditHash: simResult.auditHash,
-            entryHash: simResult.entryHash,
-          },
-          { status: 201 }
-        );
-      } catch (simErr) {
-        const simMsg = simErr instanceof Error ? simErr.message : "SIMULATION_FAILED";
-        if (simMsg === "ERR_INSUFFICIENT_FUNDS") {
-          return NextResponse.json(
-            {
-              success: false,
-              error: "Transaction rejected: Insufficient ledger balance (overdraft prevented)",
-            },
-            { status: 422 }
-          );
-        }
-        if (simMsg.startsWith("ERR_SOURCE_ACCOUNT_")) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: `Transaction blocked: Source account constraint violation (${simMsg})`,
-            },
-            { status: 403 }
-          );
-        }
-      }
     }
 
     if (message === "ERR_INSUFFICIENT_FUNDS") {

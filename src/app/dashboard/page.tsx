@@ -311,7 +311,7 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
                     : "bg-amber-950 text-amber-300 border border-amber-800/60"
                 }`}
               >
-                {dbStatus.connected ? "Neon PostgreSQL (Live)" : "Neon: Simulator Engine Active"}
+                {dbStatus.connected ? "Neon PostgreSQL (Live)" : "Neon: Connecting..."}
               </span>
               {dbStatus.latencyMs && (
                 <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
@@ -322,7 +322,7 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-YOUR-PROJECT.ap-southeast
             <p className="text-xs text-slate-400 mt-0.5">
               {dbStatus.connected
                 ? "Active double-entry persistence on Neon serverless PostgreSQL with pgvector."
-                : "Interactive double-entry ACID simulator active. Connect Neon URL in .env to persist."}
+                : "Connecting to Neon Serverless PostgreSQL database..."}
             </p>
           </div>
         </div>
@@ -1219,8 +1219,8 @@ DIRECT_URL="postgresql://neondb_owner:YOUR_PASSWORD@ep-XYZ.ap-southeast-1.aws.ne
               </div>
 
               <div className="p-3.5 rounded-xl bg-cyan-950/20 border border-cyan-800/40 text-[11px] text-cyan-300">
-                <span className="font-bold block mb-1">💡 Real-Time Simulator Note:</span>
-                While awaiting your Neon URL, the in-memory double-entry simulator is 100% active. You can execute transfers, test AML thresholds, and verify cryptographic hashes right now.
+                <span className="font-bold block mb-1">Production Database Note:</span>
+                All fund transfers and ledger entries are executed directly on Neon PostgreSQL with ACID double-entry consistency and SHA-256 cryptographic audit logs.
               </div>
 
               <div className="pt-2 flex justify-end">
