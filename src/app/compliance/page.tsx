@@ -208,20 +208,20 @@ Select a transaction or regulatory policy on the left, or query below.`,
             selectedTransaction ? (
               <div className="space-y-4">
                 {/* Transaction Reference Header */}
-                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-700/80 flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
                   <div>
                     <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 font-mono">
                       TRANSACTION ID
                     </span>
-                    <p className="font-mono font-bold text-white text-sm mt-0.5">
+                    <p className="font-mono font-bold text-slate-900 dark:text-white text-sm mt-0.5">
                       {selectedTransaction.id}
                     </p>
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-[11px] font-extrabold ${
                       selectedTransaction.status === "APPROVED"
-                        ? "bg-emerald-950 text-emerald-400 border border-emerald-700/60"
-                        : "bg-rose-950 text-rose-400 border border-rose-700/60 animate-pulse"
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-700/60"
+                        : "bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950 dark:text-rose-400 dark:border-rose-700/60 animate-pulse"
                     }`}
                   >
                     {selectedTransaction.status}
@@ -230,46 +230,46 @@ Select a transaction or regulatory policy on the left, or query below.`,
 
                 {/* Amount & Risk Overview */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
                       Amount Settled
                     </span>
-                    <p className="text-xl font-extrabold font-mono text-white mt-1">
+                    <p className="text-xl font-extrabold font-mono text-slate-900 dark:text-white mt-1">
                       ฿{Number(selectedTransaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </p>
-                    <span className="text-[10px] font-mono text-cyan-400 font-semibold">{selectedTransaction.currency}</span>
+                    <span className="text-[10px] font-mono text-cyan-700 dark:text-cyan-400 font-semibold">{selectedTransaction.currency}</span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800">
-                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">
                       Heuristic Risk Score
                     </span>
                     <p
                       className={`text-xl font-extrabold font-mono mt-1 ${
                         selectedTransaction.riskScore >= 0.65
-                          ? "text-rose-400"
+                          ? "text-rose-600 dark:text-rose-400"
                           : selectedTransaction.riskScore >= 0.3
-                          ? "text-amber-400"
-                          : "text-emerald-400"
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-emerald-600 dark:text-emerald-400"
                       }`}
                     >
                       {Math.round(selectedTransaction.riskScore * 100)}%
                     </p>
-                    <span className="text-[10px] text-slate-400 font-medium">Autonomous Index</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Autonomous Index</span>
                   </div>
                 </div>
 
                 {/* Account Details */}
-                <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-3">
-                  <div className="flex justify-between border-b border-slate-800 pb-2.5">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="flex justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
                     <div>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                         Source (Debit)
                       </span>
-                      <p className="font-bold text-white text-xs mt-0.5">
+                      <p className="font-bold text-slate-900 dark:text-white text-xs mt-0.5">
                         {selectedTransaction.sourceAccount.accountName}
                       </p>
-                      <p className="font-mono text-[11px] text-slate-400">
+                      <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
                         {selectedTransaction.sourceAccount.accountNumber}
                       </p>
                     </div>
@@ -278,10 +278,10 @@ Select a transaction or regulatory policy on the left, or query below.`,
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Destination (Credit)
                     </span>
-                    <p className="font-bold text-white text-xs mt-0.5">
+                    <p className="font-bold text-slate-900 dark:text-white text-xs mt-0.5">
                       {selectedTransaction.destinationAccount.accountName}
                     </p>
-                    <p className="font-mono text-[11px] text-slate-400">
+                    <p className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
                       {selectedTransaction.destinationAccount.accountNumber}
                     </p>
                   </div>
@@ -289,12 +289,12 @@ Select a transaction or regulatory policy on the left, or query below.`,
 
                 {/* Risk Reasons & Breach Flags */}
                 {selectedTransaction.riskReason && (
-                  <div className="p-4 rounded-2xl bg-rose-950/25 border border-rose-800/50 text-rose-200">
-                    <div className="flex items-center space-x-2 font-bold text-xs mb-1.5 text-rose-400">
+                  <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/25 border border-rose-200 dark:border-rose-800/50 text-rose-900 dark:text-rose-200">
+                    <div className="flex items-center space-x-2 font-bold text-xs mb-1.5 text-rose-600 dark:text-rose-400">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       <span>Regulatory Triggers & Anomaly Flags</span>
                     </div>
-                    <p className="text-xs leading-relaxed text-slate-200 font-medium">
+                    <p className="text-xs leading-relaxed text-slate-800 dark:text-slate-200 font-medium">
                       {selectedTransaction.riskReason}
                     </p>
                   </div>
@@ -314,12 +314,12 @@ Select a transaction or regulatory policy on the left, or query below.`,
                 </button>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400">
-                <div className="w-14 h-14 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-center mb-3">
-                  <FileSearch className="w-7 h-7 text-cyan-400" />
+              <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500 dark:text-slate-400">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex items-center justify-center mb-3">
+                  <FileSearch className="w-7 h-7 text-cyan-600 dark:text-cyan-400" />
                 </div>
-                <p className="font-bold text-slate-200 text-sm">No Active Transaction Selected</p>
-                <p className="text-xs text-slate-400 mt-1.5 max-w-xs leading-relaxed">
+                <p className="font-bold text-slate-900 dark:text-slate-200 text-sm">No Active Transaction Selected</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-xs leading-relaxed">
                   Go to the Dashboard and select &quot;Copilot&quot; on any transaction, or query general regulatory directives directly.
                 </p>
               </div>
@@ -334,8 +334,8 @@ Select a transaction or regulatory policy on the left, or query below.`,
                     onClick={() => setPolicyCategory(cat)}
                     className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
                       policyCategory === cat
-                        ? "bg-cyan-950 text-cyan-300 border border-cyan-700/80"
-                        : "bg-slate-900/80 text-slate-400 hover:text-white"
+                        ? "bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-700/80"
+                        : "bg-slate-100 dark:bg-slate-900/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     {cat}
@@ -353,21 +353,21 @@ Select a transaction or regulatory policy on the left, or query below.`,
                       onClick={() => setSelectedPolicy(pol)}
                       className={`p-4 rounded-2xl border transition duration-200 cursor-pointer ${
                         isSelected
-                          ? "bg-slate-900/90 border-cyan-500/60 shadow-lg shadow-cyan-950/30"
-                          : "bg-slate-900/40 border-slate-800/80 hover:border-slate-700"
+                          ? "bg-cyan-50/80 dark:bg-slate-900/90 border-cyan-400 dark:border-cyan-500/60 shadow-md"
+                          : "bg-white dark:bg-slate-900/40 border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-cyan-400 text-xs">{pol.code}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 uppercase font-mono font-semibold">
+                        <span className="font-mono font-bold text-cyan-700 dark:text-cyan-400 text-xs">{pol.code}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 uppercase font-mono font-semibold">
                           {pol.category}
                         </span>
                       </div>
-                      <h4 className="font-bold text-white mt-1.5 text-xs">{pol.title}</h4>
-                      <p className="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">{pol.rawContent}</p>
+                      <h4 className="font-bold text-slate-900 dark:text-white mt-1.5 text-xs">{pol.title}</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">{pol.rawContent}</p>
 
                       {isSelected && (
-                        <div className="mt-3 pt-2.5 border-t border-slate-800 flex justify-end">
+                        <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-slate-800 flex justify-end">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -375,7 +375,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
                                 `Analyze the regulatory requirements of [${pol.code}] ("${pol.title}") and how our institution should enforce automated controls.`
                               );
                             }}
-                            className="text-xs text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1.5 cursor-pointer"
+                            className="text-xs text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300 font-bold flex items-center space-x-1.5 cursor-pointer"
                           >
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>Interrogate with Copilot</span>
@@ -393,21 +393,21 @@ Select a transaction or regulatory policy on the left, or query below.`,
       {/* ========================================================================= */}
       {/* RIGHT PANEL: STREAMING AI COPILOT CHAT INTERFACE                          */}
       {/* ========================================================================= */}
-      <div className="w-full lg:w-7/12 flex flex-col glass-panel rounded-3xl border border-slate-800/90 overflow-hidden shadow-2xl">
+      <div className="w-full lg:w-7/12 flex flex-col glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 overflow-hidden shadow-xl dark:shadow-2xl">
         {/* Chat Header */}
-        <div className="p-4 border-b border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/20">
               <Bot className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="font-extrabold text-white text-sm tracking-tight">FinGuard Regulatory RAG Copilot</h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/40">
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-sm tracking-tight">FinGuard Regulatory RAG Copilot</h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/40">
                   Online
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
                 Live inference against BOT, AMLO & PDPA Vector Knowledge Base
               </p>
             </div>
@@ -425,7 +425,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
                   },
                 ])
               }
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               title="Reset Conversation"
             >
               <RotateCcw className="w-4 h-4" />
@@ -493,7 +493,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
         </div>
 
         {/* Quick Action Prompt Chips */}
-        <div className="px-5 py-2.5 bg-slate-950/60 border-t border-slate-800/60 flex items-center space-x-2 overflow-x-auto text-[11px]">
+        <div className="px-5 py-2.5 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800/60 flex items-center space-x-2 overflow-x-auto text-[11px]">
           <span className="text-slate-500 font-bold uppercase text-[9px] shrink-0">Prompts:</span>
           <button
             onClick={() =>
@@ -501,7 +501,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
                 "ตรวจสอบกฎหมายและระเบียบธนาคารแห่งประเทศไทย (BOT-NO-12/2566) สำหรับธุรกรรมโอนเงินเกิน 500,000 บาท ว่ามีข้อกำหนดอย่างไรบ้าง"
               )
             }
-            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-white"
+            className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
             🇹🇭 เกณฑ์ ธปท. 500K THB
           </button>
@@ -511,7 +511,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
                 "ขอคำแนะนำการจัดทำรายงานธุรกรรมที่มีเหตุอันควรสงสัย (STR) ตาม พ.ร.บ. ป้องกันและปราบปรามการฟอกเงิน (AMLO-SEC-2024-01) สำหรับธุรกรรมเกิน 2,000,000 บาท"
               )
             }
-            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-white"
+            className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
             🇹🇭 รายงาน ปปง. (STR) &gt; 2M
           </button>
@@ -521,7 +521,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
                 "ตรวจสอบข้อกำหนด PDPA B.E. 2562 ในภาคการเงินเกี่ยวกับการ Mask ข้อมูลเลขบัตรประชาชน 13 หลัก และเลขบัญชีธนาคาร"
               )
             }
-            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-white"
+            className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
             🇹🇭 กฎหมาย PDPA & PII Masking
           </button>
@@ -531,7 +531,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
                 "วิเคราะห์ความเสี่ยงบัญชีม้าและการตรวจจับความผิดปกติของธุรกรรมแบบถี่ผิดปกติ (Velocity Burst Anomaly Detection)"
               )
             }
-            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-white"
+            className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
             🇹🇭 ตรวจจับบัญชีม้า & Velocity Burst
           </button>

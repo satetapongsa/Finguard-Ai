@@ -89,18 +89,18 @@ export default function AuditExplorerPage() {
   return (
     <div className="space-y-7 pb-10">
       {/* Page Title & Integrity Assurance Banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800/80">
         <div>
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Cryptographic Immutable Audit Explorer
             </h1>
-            <span className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-700/60 text-xs font-mono font-bold">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-400 dark:border-emerald-700/60 text-xs font-mono font-bold">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Blockchain-Linked SHA-256</span>
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1.5 font-medium">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 font-medium">
             Tamper-evident, write-only compliance ledger with deterministic SHA-256 linked-list derivation.
           </p>
         </div>
@@ -118,9 +118,9 @@ export default function AuditExplorerPage() {
           <button
             onClick={fetchLogs}
             disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-slate-700/80 transition cursor-pointer"
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-bold border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none transition cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-cyan-400" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-cyan-600 dark:text-cyan-400" : ""}`} />
             <span>Sync Audit Log</span>
           </button>
         </div>
@@ -131,14 +131,14 @@ export default function AuditExplorerPage() {
         <div
           className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs ${
             verificationResult.isValid
-              ? "bg-emerald-950/30 border-emerald-800/60 text-emerald-300"
-              : "bg-rose-950/40 border-rose-800/60 text-rose-300"
+              ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-300"
+              : "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800/60 text-rose-900 dark:text-rose-300"
           }`}
         >
           <div className="flex items-center space-x-3">
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                verificationResult.isValid ? "bg-emerald-900/60 text-emerald-400" : "bg-rose-900/60 text-rose-400"
+                verificationResult.isValid ? "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-400" : "bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-400"
               }`}
             >
               {verificationResult.isValid ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
@@ -146,24 +146,24 @@ export default function AuditExplorerPage() {
             <div>
               <div className="font-extrabold text-sm flex items-center space-x-2">
                 <span>{verificationResult.isValid ? "Chain Integrity Intact (100% Unbroken)" : "Chain Tampering Detected!"}</span>
-                <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800">
+                <span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300">
                   {verificationResult.totalBlocks} Blocks Verified
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
                 Every audit block&apos;s SHA-256 hash successfully satisfies parent continuity and content non-repudiation.
               </p>
             </div>
           </div>
 
-          <div className="font-mono text-[10px] space-y-0.5 text-slate-400">
+          <div className="font-mono text-[10px] space-y-0.5 text-slate-600 dark:text-slate-400">
             <div>
               Genesis Hash:{" "}
-              <span className="text-cyan-300 font-semibold">{verificationResult.genesisHash.slice(0, 16)}...</span>
+              <span className="text-cyan-700 dark:text-cyan-300 font-semibold">{verificationResult.genesisHash.slice(0, 16)}...</span>
             </div>
             <div>
               Latest Link:{" "}
-              <span className="text-cyan-300 font-semibold">{verificationResult.latestHash.slice(0, 16)}...</span>
+              <span className="text-cyan-700 dark:text-cyan-300 font-semibold">{verificationResult.latestHash.slice(0, 16)}...</span>
             </div>
           </div>
         </div>
@@ -172,44 +172,44 @@ export default function AuditExplorerPage() {
       {/* Audit Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="glass-card rounded-2xl p-5 relative overflow-hidden">
-          <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             <span>Total Recorded Events</span>
-            <Database className="w-5 h-5 text-cyan-400" />
+            <Database className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
           </div>
-          <p className="text-3xl font-mono font-extrabold text-white mt-3">{logs.length}</p>
-          <span className="text-xs text-slate-400 mt-1 block">Append-only sequential event records</span>
+          <p className="text-3xl font-mono font-extrabold text-slate-900 dark:text-white mt-3">{logs.length}</p>
+          <span className="text-xs text-slate-600 dark:text-slate-400 mt-1 block">Append-only sequential event records</span>
         </div>
 
         <div className="glass-card rounded-2xl p-5 relative overflow-hidden">
-          <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             <span>Blockchain Links Verified</span>
-            <LinkIcon className="w-5 h-5 text-emerald-400" />
+            <LinkIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <p className="text-3xl font-mono font-extrabold text-emerald-400 mt-3">
+          <p className="text-3xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 mt-3">
             {logs.filter((l) => l.isIntegrityVerified).length}
           </p>
-          <span className="text-xs text-emerald-400/80 mt-1 block">SHA-256 Parent Chaining Verified</span>
+          <span className="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1 block">SHA-256 Parent Chaining Verified</span>
         </div>
 
         <div className="glass-card rounded-2xl p-5 relative overflow-hidden">
-          <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             <span>Alert & Blocked Interceptions</span>
-            <AlertTriangle className="w-5 h-5 text-rose-400" />
+            <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
           </div>
-          <p className="text-3xl font-mono font-extrabold text-rose-400 mt-3">
+          <p className="text-3xl font-mono font-extrabold text-rose-600 dark:text-rose-400 mt-3">
             {logs.filter((l) => l.status === "ALERT" || l.status === "BLOCKED").length}
           </p>
-          <span className="text-xs text-rose-400/80 mt-1 block">Compliance interventions recorded</span>
+          <span className="text-xs text-rose-600 dark:text-rose-400/80 mt-1 block">Compliance interventions recorded</span>
         </div>
       </div>
 
       {/* Table Section */}
-      <div className="glass-panel rounded-3xl border border-slate-800/90 overflow-hidden shadow-2xl">
+      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 overflow-hidden shadow-xl dark:shadow-2xl">
         {/* Table Header Controls */}
-        <div className="p-5 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/40">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/40">
           <div className="flex items-center space-x-3">
-            <h2 className="font-extrabold text-base text-white tracking-tight">Immutable Event Journal</h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono font-medium border border-slate-700/60">
+            <h2 className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">Immutable Event Journal</h2>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-medium border border-slate-300 dark:border-slate-700/60">
               {filteredLogs.length} entries
             </span>
           </div>
@@ -222,11 +222,11 @@ export default function AuditExplorerPage() {
                 placeholder="Search action, hash, actor..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-slate-950/80 border border-slate-700/80 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-52 sm:w-64 transition"
+                className="bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-52 sm:w-64 transition"
               />
             </div>
 
-            <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs">
+            <div className="flex items-center bg-slate-100 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
               {["ALL", "SUCCESS", "ALERT", "BLOCKED"].map((st) => (
                 <button
                   key={st}
@@ -234,7 +234,7 @@ export default function AuditExplorerPage() {
                   className={`px-3 py-1.5 rounded-lg transition text-xs font-bold cursor-pointer ${
                     statusFilter === st
                       ? "bg-white text-cyan-800 border border-cyan-300 shadow-sm dark:bg-gradient-to-r dark:from-cyan-900 dark:to-slate-800 dark:text-cyan-300 dark:border-cyan-500/40"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                   }`}
                 >
                   {st}
@@ -246,8 +246,8 @@ export default function AuditExplorerPage() {
 
         {/* Audit Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-950/60 border-b border-slate-800/80 uppercase tracking-wider text-[11px] text-slate-400 font-bold">
+          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+            <thead className="bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800/80 uppercase tracking-wider text-[11px] text-slate-600 dark:text-slate-400 font-bold">
               <tr>
                 <th className="px-5 py-3.5">Timestamp</th>
                 <th className="px-5 py-3.5">Actor / Principal</th>
@@ -258,7 +258,7 @@ export default function AuditExplorerPage() {
                 <th className="px-5 py-3.5 text-right">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-sans">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-16 text-slate-500 font-medium">
@@ -269,9 +269,9 @@ export default function AuditExplorerPage() {
                 filteredLogs.map((log) => {
                   const displayHash = log.entryHash || log.payloadHash;
                   return (
-                    <tr key={log.id} className="hover:bg-slate-800/30 transition duration-150">
+                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition duration-150">
                       {/* Timestamp */}
-                      <td className="px-5 py-4 font-mono text-xs text-slate-300">
+                      <td className="px-5 py-4 font-mono text-xs text-slate-600 dark:text-slate-300">
                         {new Date(log.createdAt).toLocaleString([], {
                           year: "numeric",
                           month: "2-digit",
@@ -284,7 +284,7 @@ export default function AuditExplorerPage() {
 
                       {/* Actor */}
                       <td className="px-5 py-4">
-                        <div className="font-bold text-white text-xs">
+                        <div className="font-bold text-slate-900 dark:text-white text-xs">
                           {log.actor?.name || "System Autonomous Agent"}
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">
@@ -294,14 +294,14 @@ export default function AuditExplorerPage() {
 
                       {/* Action Type */}
                       <td className="px-5 py-4">
-                        <span className="font-mono text-[10px] px-2.5 py-1 rounded-md font-bold bg-slate-900 border border-slate-700/80 text-cyan-300">
+                        <span className="font-mono text-[10px] px-2.5 py-1 rounded-md font-bold bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 text-cyan-800 dark:text-cyan-300">
                           {log.actionType}
                         </span>
                       </td>
 
                       {/* Target Resource */}
-                      <td className="px-5 py-4 font-mono text-xs text-slate-400">
-                        <span className="font-semibold text-slate-200">{log.targetResource}</span>
+                      <td className="px-5 py-4 font-mono text-xs text-slate-600 dark:text-slate-400">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{log.targetResource}</span>
                         {log.resourceId && (
                           <span className="text-[10px] block text-slate-500">
                             #{log.resourceId.slice(0, 8)}
@@ -312,16 +312,16 @@ export default function AuditExplorerPage() {
                       {/* Cryptographic Entry Hash */}
                       <td className="px-5 py-4">
                         <div className="flex items-center space-x-2">
-                          <span className="font-mono text-[11px] text-cyan-300 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+                          <span className="font-mono text-[11px] text-cyan-800 dark:text-cyan-300 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
                             {displayHash ? `${displayHash.slice(0, 10)}...${displayHash.slice(-8)}` : "N/A"}
                           </span>
                           <button
                             onClick={() => copyHash(displayHash)}
-                            className="p-1 text-slate-400 hover:text-white transition cursor-pointer"
+                            className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
                             title="Copy Full SHA-256 Hash"
                           >
                             {copiedHash === displayHash ? (
-                              <Check className="w-4 h-4 text-emerald-400" />
+                              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                             ) : (
                               <Copy className="w-4 h-4" />
                             )}
@@ -334,14 +334,14 @@ export default function AuditExplorerPage() {
                         <span
                           className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-bold ${
                             log.status === "SUCCESS"
-                              ? "bg-emerald-950/80 text-emerald-300 border border-emerald-700/60"
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700/60"
                               : log.status === "ALERT"
-                              ? "bg-amber-950/80 text-amber-300 border border-amber-700/60"
-                              : "bg-rose-950/80 text-rose-300 border border-rose-700/60"
+                              ? "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700/60"
+                              : "bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-700/60"
                           }`}
                         >
                           {log.status === "SUCCESS" ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           ) : (
                             <AlertTriangle className="w-3.5 h-3.5" />
                           )}
@@ -353,9 +353,9 @@ export default function AuditExplorerPage() {
                       <td className="px-5 py-4 text-right">
                         <button
                           onClick={() => setInspectedLog(log)}
-                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition cursor-pointer border border-slate-700"
+                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-bold transition cursor-pointer border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
                         >
-                          <FileCode className="w-3.5 h-3.5 text-cyan-400" />
+                          <FileCode className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                           <span>Inspect</span>
                         </button>
                       </td>
@@ -372,21 +372,21 @@ export default function AuditExplorerPage() {
       {inspectedLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-md">
           <div className="w-full max-w-2xl glass-panel bg-white dark:bg-slate-950 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 sm:p-7 relative text-slate-800 dark:text-slate-200 shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
               <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-cyan-950/80 border border-cyan-700/60 flex items-center justify-center text-cyan-400">
+                <div className="w-9 h-9 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700/60 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-white text-base">
+                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
                     Audit Entry Inspection: #{inspectedLog.id}
                   </h3>
-                  <p className="text-xs text-slate-400">Tamper-evident blockchain-linked payload record</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Tamper-evident blockchain-linked payload record</p>
                 </div>
               </div>
               <button
                 onClick={() => setInspectedLog(null)}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold cursor-pointer"
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold cursor-pointer text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-transparent"
               >
                 Close
               </button>
@@ -394,44 +394,44 @@ export default function AuditExplorerPage() {
 
             <div className="mt-5 space-y-4 text-xs">
               {/* Linked Chain Hashes */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2 font-mono text-[11px]">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 font-mono text-[11px]">
                 <div>
                   <span className="text-slate-500 uppercase tracking-wider text-[9px] block">Previous Block Hash (Parent Link):</span>
-                  <span className="text-cyan-400 break-all">{inspectedLog.previousHash || "0".repeat(64) + " (Genesis)"}</span>
+                  <span className="text-cyan-700 dark:text-cyan-400 break-all">{inspectedLog.previousHash || "0".repeat(64) + " (Genesis)"}</span>
                 </div>
-                <div className="pt-1 border-t border-slate-900">
+                <div className="pt-1 border-t border-slate-200 dark:border-slate-900">
                   <span className="text-slate-500 uppercase tracking-wider text-[9px] block">Payload SHA-256 Hash:</span>
-                  <span className="text-emerald-400 break-all">{inspectedLog.payloadHash}</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 break-all">{inspectedLog.payloadHash}</span>
                 </div>
                 {inspectedLog.entryHash && (
-                  <div className="pt-1 border-t border-slate-900">
+                  <div className="pt-1 border-t border-slate-200 dark:border-slate-900">
                     <span className="text-slate-500 uppercase tracking-wider text-[9px] block">Current Block Entry Hash:</span>
-                    <span className="text-indigo-400 break-all">{inspectedLog.entryHash}</span>
+                    <span className="text-indigo-700 dark:text-indigo-400 break-all">{inspectedLog.entryHash}</span>
                   </div>
                 )}
               </div>
 
               <div>
-                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                <span className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                   Resource & Principal Metadata:
                 </span>
-                <div className="mt-1.5 grid grid-cols-2 gap-2 text-slate-300">
-                  <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                <div className="mt-1.5 grid grid-cols-2 gap-2 text-slate-800 dark:text-slate-300">
+                  <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
                     <span className="text-slate-500 block text-[10px]">Action Type</span>
-                    <span className="font-mono font-bold text-white">{inspectedLog.actionType}</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">{inspectedLog.actionType}</span>
                   </div>
-                  <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                  <div className="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
                     <span className="text-slate-500 block text-[10px]">Target Resource</span>
-                    <span className="font-mono font-bold text-white">{inspectedLog.targetResource}</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">{inspectedLog.targetResource}</span>
                   </div>
                 </div>
               </div>
 
               <div>
-                <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+                <span className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
                   Sanitized Event Payload:
                 </span>
-                <pre className="mt-1.5 p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-cyan-300 max-h-48 overflow-y-auto">
+                <pre className="mt-1.5 p-3.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-[11px] text-cyan-800 dark:text-cyan-300 max-h-48 overflow-y-auto">
                   {JSON.stringify(inspectedLog.details || {}, null, 2)}
                 </pre>
               </div>

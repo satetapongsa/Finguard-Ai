@@ -181,6 +181,28 @@ html:not(.dark) [class*="bg-slate-800"], html.light [class*="bg-slate-800"] {
   background-color: #e2e8f0 !important;
 }
 
+/* Hover Overrides in Light Mode */
+html:not(.dark) [class*="hover:bg-slate-800"]:hover, html.light [class*="hover:bg-slate-800"]:hover,
+html:not(.dark) [class*="hover:bg-slate-700"]:hover, html.light [class*="hover:bg-slate-700"]:hover,
+html:not(.dark) [class*="hover:bg-slate-900"]:hover, html.light [class*="hover:bg-slate-900"]:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) [class*="hover:bg-amber-900"]:hover, html.light [class*="hover:bg-amber-900"]:hover {
+  background-color: #fde68a !important;
+}
+html:not(.dark) [class*="hover:bg-rose-900"]:hover, html.light [class*="hover:bg-rose-900"]:hover {
+  background-color: #fecdd3 !important;
+}
+html:not(.dark) [class*="hover:bg-purple-900"]:hover, html.light [class*="hover:bg-purple-900"]:hover {
+  background-color: #e9d5ff !important;
+}
+html:not(.dark) [class*="hover:bg-cyan-900"]:hover, html.light [class*="hover:bg-cyan-900"]:hover,
+html:not(.dark) [class*="hover:bg-cyan-950"]:hover, html.light [class*="hover:bg-cyan-950"]:hover {
+  background-color: #bae6fd !important;
+}
+
 /* Border Overrides */
 html:not(.dark) [class*="border-slate-800"], html.light [class*="border-slate-800"],
 html:not(.dark) [class*="border-slate-700"], html.light [class*="border-slate-700"] {
@@ -188,28 +210,53 @@ html:not(.dark) [class*="border-slate-700"], html.light [class*="border-slate-70
 }
 
 /* Colored Badge & Pill Replacements in Light Mode */
-html:not(.dark) [class*="bg-cyan-950"], html.light [class*="bg-cyan-950"] {
+html:not(.dark) [class*="bg-cyan-950"], html.light [class*="bg-cyan-950"],
+html:not(.dark) [class*="bg-cyan-900"], html.light [class*="bg-cyan-900"] {
   background-color: #e0f2fe !important;
   color: #0369a1 !important;
   border-color: #7dd3fc !important;
 }
 
-html:not(.dark) [class*="bg-emerald-950"], html.light [class*="bg-emerald-950"] {
+html:not(.dark) [class*="bg-emerald-950"], html.light [class*="bg-emerald-950"],
+html:not(.dark) [class*="bg-emerald-900"], html.light [class*="bg-emerald-900"] {
   background-color: #d1fae5 !important;
   color: #065f46 !important;
   border-color: #6ee7b7 !important;
 }
 
-html:not(.dark) [class*="bg-rose-950"], html.light [class*="bg-rose-950"] {
+html:not(.dark) [class*="bg-rose-950"], html.light [class*="bg-rose-950"],
+html:not(.dark) [class*="bg-rose-900"], html.light [class*="bg-rose-900"] {
   background-color: #ffe4e6 !important;
   color: #9f1239 !important;
   border-color: #fca5a5 !important;
 }
 
-html:not(.dark) [class*="bg-amber-950"], html.light [class*="bg-amber-950"] {
+html:not(.dark) [class*="bg-amber-950"], html.light [class*="bg-amber-950"],
+html:not(.dark) [class*="bg-amber-900"], html.light [class*="bg-amber-900"] {
   background-color: #fef3c7 !important;
   color: #92400e !important;
   border-color: #fcd34d !important;
+}
+
+html:not(.dark) [class*="bg-purple-950"], html.light [class*="bg-purple-950"],
+html:not(.dark) [class*="bg-purple-900"], html.light [class*="bg-purple-900"] {
+  background-color: #f3e8ff !important;
+  color: #7e22ce !important;
+  border-color: #d8b4fe !important;
+}
+
+html:not(.dark) [class*="bg-indigo-950"], html.light [class*="bg-indigo-950"],
+html:not(.dark) [class*="bg-indigo-900"], html.light [class*="bg-indigo-900"] {
+  background-color: #e0e7ff !important;
+  color: #4338ca !important;
+  border-color: #a5b4fc !important;
+}
+
+html:not(.dark) [class*="bg-blue-950"], html.light [class*="bg-blue-950"],
+html:not(.dark) [class*="bg-blue-900"], html.light [class*="bg-blue-900"] {
+  background-color: #dbeafe !important;
+  color: #1d4ed8 !important;
+  border-color: #93c5fd !important;
 }
 
 /* Text Contrasts */
