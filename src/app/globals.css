@@ -11,6 +11,24 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, a {
+  touch-action: manipulation;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
 body {
   color: var(--foreground);
   background-color: var(--background);

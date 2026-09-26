@@ -1,6 +1,7 @@
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
   extensions = [pgvector(map: "vector")]
 }
 
@@ -96,6 +97,7 @@ model FinancialAccount {
 
   outgoingTransactions Transaction[] @relation("SourceAccount")
   incomingTransactions Transaction[] @relation("DestinationAccount")
+  ledgerEntries        LedgerEntry[]
 
   @@index([accountNumber])
   @@index([status])
@@ -131,6 +133,7 @@ model Transaction {
 
   sourceAccount      FinancialAccount @relation("SourceAccount", fields: [sourceAccountId], references: [id], onDelete: Restrict)
   destinationAccount FinancialAccount @relation("DestinationAccount", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  ledgerEntries      LedgerEntry[]
 
   @@index([sourceAccountId])
   @@index([destinationAccountId])
@@ -158,6 +161,29 @@ model CompliancePolicy {
   @@index([isActive])
 }
 
+enum EntryType {
+  DEBIT
+  CREDIT
+}
+
+model LedgerEntry {
+  id            String           @id @default(cuid())
+  transactionId String
+  accountId     String
+  entryType     EntryType
+  amount        Decimal          @db.Decimal(18, 2)
+  balanceAfter  Decimal          @db.Decimal(18, 2)
+  currency      String           @default("THB")
+  createdAt     DateTime         @default(now())
+
+  transaction   Transaction      @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  account       FinancialAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([transactionId])
+  @@index([accountId])
+  @@index([createdAt])
+}
+
 // ---------------------------------------------------------
 // 4. CRYPTOGRAPHIC IMMUTABLE AUDIT LOG (WRITE-ONLY)
 // ---------------------------------------------------------
@@ -175,6 +201,8 @@ model AuditLog {
   targetResource String      // e.g. "Transaction", "FinancialAccount", "CompliancePolicy"
   resourceId     String?
   payloadHash    String      // SHA-256 integrity hash of sanitized payload
+  previousHash   String?     // SHA-256 hash of previous AuditLog entry (Blockchain-style linked list)
+  entryHash      String      @default("") // SHA-256(previousHash + payloadHash + actionType + resourceId + timestamp)
   ipAddress      String?
   status         AuditStatus @default(SUCCESS)
   details        Json?
@@ -186,5 +214,6 @@ model AuditLog {
   @@index([actionType])
   @@index([targetResource])
   @@index([payloadHash])
+  @@index([entryHash])
   @@index([createdAt])
 }

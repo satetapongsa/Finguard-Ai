@@ -498,32 +498,42 @@ Select a transaction or regulatory policy on the left, or query below.`,
           <button
             onClick={() =>
               handleSendMessage(
-                "Evaluate Bank of Thailand threshold rules (BOT-NO-12/2566) for large transfers exceeding 500,000 THB."
+                "ตรวจสอบกฎหมายและระเบียบธนาคารแห่งประเทศไทย (BOT-NO-12/2566) สำหรับธุรกรรมโอนเงินเกิน 500,000 บาท ว่ามีข้อกำหนดอย่างไรบ้าง"
               )
             }
-            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-white"
           >
-            BOT 500K THB Rule
+            🇹🇭 เกณฑ์ ธปท. 500K THB
           </button>
           <button
             onClick={() =>
               handleSendMessage(
-                "Draft an AMLO Suspicious Transaction Report (STR) justification based on high-risk transaction velocity."
+                "ขอคำแนะนำการจัดทำรายงานธุรกรรมที่มีเหตุอันควรสงสัย (STR) ตาม พ.ร.บ. ป้องกันและปราบปรามการฟอกเงิน (AMLO-SEC-2024-01) สำหรับธุรกรรมเกิน 2,000,000 บาท"
               )
             }
-            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-white"
           >
-            Draft AMLO STR
+            🇹🇭 รายงาน ปปง. (STR) &gt; 2M
           </button>
           <button
             onClick={() =>
               handleSendMessage(
-                "Check PDPA Section 2562 guardrail requirements for masking Thai National IDs and payment cards."
+                "ตรวจสอบข้อกำหนด PDPA B.E. 2562 ในภาคการเงินเกี่ยวกับการ Mask ข้อมูลเลขบัตรประชาชน 13 หลัก และเลขบัญชีธนาคาร"
               )
             }
-            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-white"
           >
-            PDPA Masking Audit
+            🇹🇭 กฎหมาย PDPA & PII Masking
+          </button>
+          <button
+            onClick={() =>
+              handleSendMessage(
+                "วิเคราะห์ความเสี่ยงบัญชีม้าและการตรวจจับความผิดปกติของธุรกรรมแบบถี่ผิดปกติ (Velocity Burst Anomaly Detection)"
+              )
+            }
+            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-white"
+          >
+            🇹🇭 ตรวจจับบัญชีม้า & Velocity Burst
           </button>
         </div>
 

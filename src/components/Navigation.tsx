@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ShieldAlert,
   LayoutDashboard,
@@ -10,13 +11,60 @@ import {
   PlusCircle,
   Database,
   Lock,
-  Sparkles,
+  UserCheck,
+  Activity,
+  Server,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
+import type { RoleType } from "@/lib/types";
 
 export default function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
   const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
+
+  const [activeRole, setActiveRole] = useState<RoleType>("COMPLIANCE_OFFICER");
+  const [dbStatus, setDbStatus] = useState<{
+    connected: boolean;
+    provider: string;
+    isNeon?: boolean;
+    latencyMs?: number;
+  }>({
+    connected: false,
+    provider: "Checking Database...",
+  });
+
+  useEffect(() => {
+    // Read active role from cookie
+    const match = document.cookie.match(/(?:^|; )finguard_role=([^;]*)/);
+    if (match && (match[1] === "ADMIN" || match[1] === "COMPLIANCE_OFFICER" || match[1] === "AUDITOR")) {
+      setActiveRole(match[1] as RoleType);
+    }
+
+    // Check database connection status
+    fetch("/api/database/status")
+      .then((res) => res.json())
+      .then((data) => {
+        setDbStatus({
+          connected: data.connected,
+          provider: data.provider || "PostgreSQL",
+          isNeon: data.provider?.includes("Neon"),
+          latencyMs: data.latencyMs,
+        });
+      })
+      .catch(() => {
+        setDbStatus({
+          connected: false,
+          provider: "Simulation Ledger Engine",
+        });
+      });
+  }, []);
+
+  const handleRoleChange = (newRole: RoleType) => {
+    setActiveRole(newRole);
+    document.cookie = `finguard_role=${newRole}; path=/; max-age=86400; SameSite=Lax`;
+    router.refresh();
+  };
 
   const navItems = [
     { label: "Executive Dashboard", href: "/dashboard", icon: LayoutDashboard, badge: "Live" },
@@ -25,7 +73,7 @@ export default function Navigation() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-[#040810]/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-[#040810]/90 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
         {/* Brand / Logo */}
         <Link href="/dashboard" className="flex items-center space-x-3.5 group">
@@ -62,7 +110,8 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                prefetch={true}
+                className={`relative flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
                   isActive
                     ? "bg-gradient-to-r from-cyan-950/80 to-slate-800 text-cyan-300 border border-cyan-500/30 shadow-sm shadow-cyan-500/10"
                     : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50"
@@ -88,31 +137,80 @@ export default function Navigation() {
 
         {/* Action & Status Indicator */}
         <div className="flex items-center space-x-3">
-          {/* Sovereign Engine Badges */}
-          <div className="hidden xl:flex items-center space-x-2 text-[11px] font-medium">
-            <span className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-800/40">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>ACID Engine</span>
+          {/* Neon Database Status Badge */}
+          <div
+            title={dbStatus.connected ? "Connected to PostgreSQL Database" : "Using High-Fidelity Simulation Ledger"}
+            className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+              dbStatus.connected
+                ? "bg-emerald-950/70 border-emerald-700/60 text-emerald-300"
+                : "bg-amber-950/70 border-amber-700/60 text-amber-300"
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                dbStatus.connected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+              }`}
+            />
+            <span className="font-mono text-[10px]">
+              {dbStatus.connected ? "Neon DB: Online" : "Neon: Simulator Ready"}
             </span>
-            <span className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-cyan-950/40 text-cyan-400 border border-cyan-800/40">
-              <Lock className="w-3 h-3 text-cyan-400" />
-              <span>PDPA Shield</span>
-            </span>
-            <span className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-purple-950/40 text-purple-400 border border-purple-800/40">
-              <Database className="w-3 h-3 text-purple-400" />
-              <span>pgvector</span>
-            </span>
+          </div>
+
+          {/* RBAC Role Switcher */}
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium">
+            <UserCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold hidden sm:inline">Role:</span>
+            <select
+              value={activeRole}
+              onChange={(e) => handleRoleChange(e.target.value as RoleType)}
+              className="bg-transparent text-cyan-300 text-xs font-bold focus:outline-none cursor-pointer"
+            >
+              <option value="ADMIN" className="bg-slate-900 text-white">ADMIN</option>
+              <option value="COMPLIANCE_OFFICER" className="bg-slate-900 text-white">OFFICER</option>
+              <option value="AUDITOR" className="bg-slate-900 text-white">AUDITOR (Read-only)</option>
+            </select>
           </div>
 
           {/* Quick Transfer Button */}
           <button
             onClick={() => setQuickTransferOpen(true)}
-            className="group relative flex items-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/25 hover:shadow-cyan-500/40 transition duration-200 cursor-pointer"
+            className="group relative flex items-center space-x-2 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-cyan-600/25 hover:shadow-cyan-500/40 transition duration-200 cursor-pointer"
           >
             <PlusCircle className="w-4 h-4 transition-transform group-hover:rotate-90 duration-300" />
-            <span>Execute Transfer</span>
+            <span className="hidden sm:inline">Simulate Transfer</span>
+            <span className="sm:hidden">Transfer</span>
           </button>
         </div>
+      </div>
+
+      {/* Mobile Floating Bottom Navigation Dock */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#040810]/95 backdrop-blur-xl border-t border-slate-800/90 px-3 py-2 flex items-center justify-around shadow-2xl">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              prefetch={true}
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition-all duration-150 ${
+                isActive
+                  ? "text-cyan-400 bg-cyan-950/50 border border-cyan-500/30"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <Icon className="w-4 h-4 mb-0.5" />
+              <span>{item.label.split(" ")[0]}</span>
+            </Link>
+          );
+        })}
+        <button
+          onClick={() => setQuickTransferOpen(true)}
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30"
+        >
+          <PlusCircle className="w-4 h-4 mb-0.5 text-emerald-400" />
+          <span>Simulate</span>
+        </button>
       </div>
     </header>
   );

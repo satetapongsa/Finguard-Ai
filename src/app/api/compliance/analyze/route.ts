@@ -5,6 +5,7 @@ import { openai } from "@ai-sdk/openai";
 import prisma from "@/lib/prisma";
 import { ComplianceAnalyzeSchema } from "@/lib/types";
 import { sanitizeText } from "@/lib/security/guardrails";
+import { searchPolicies } from "@/lib/rag/vector-store";
 
 /**
  * Autonomous Financial Document Compliance RAG Engine
@@ -56,89 +57,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Retrieval Augmented Generation (RAG) Policy Search
-    // Attempt pgvector vector retrieval or semantic category/keyword retrieval
-    let retrievedPolicies: Array<{
-      code: string;
-      title: string;
-      category: string;
-      rawContent: string;
-    }> = [];
-
-    try {
-      // Semantic & Category Filter Retrieval
-      const whereClause: {
-        isActive: boolean;
-        category?: string;
-        OR?: Array<
-          | { rawContent: { contains: string; mode: "insensitive" } }
-          | { title: { contains: string; mode: "insensitive" } }
-          | { code: { contains: string; mode: "insensitive" } }
-        >;
-      } = { isActive: true };
-
-      if (category && category !== "ALL") {
-        whereClause.category = category;
-      }
-
-      const keywords = sanitizedQuery.split(/\s+/).filter((w) => w.length > 2);
-      if (keywords.length > 0) {
-        whereClause.OR = keywords.slice(0, 3).flatMap((kw) => [
-          { rawContent: { contains: kw, mode: "insensitive" } },
-          { title: { contains: kw, mode: "insensitive" } },
-          { code: { contains: kw, mode: "insensitive" } },
-        ]);
-      }
-
-      retrievedPolicies = await prisma.compliancePolicy.findMany({
-        where: whereClause,
-        take: 3,
-        select: {
-          code: true,
-          title: true,
-          category: true,
-          rawContent: true,
-        },
-      });
-
-      // Fallback: If query did not match specific keywords, retrieve standard top policies
-      if (retrievedPolicies.length === 0) {
-        retrievedPolicies = await prisma.compliancePolicy.findMany({
-          where: { isActive: true },
-          take: 3,
-          select: {
-            code: true,
-            title: true,
-            category: true,
-            rawContent: true,
-          },
-        });
-      }
-    } catch (_dbErr) {
-      // In-memory fallback policies for isolated preview testing
-      retrievedPolicies = [
-        {
-          code: "BOT-NO-12/2566",
-          title: "Bank of Thailand Guidelines on High-Value Digital Fund Transfers",
-          category: "AML",
-          rawContent:
-            "Financial institutions must implement real-time anomaly detection for transactions exceeding 500,000 THB. Rapid multiple transfers exceeding 2,000,000 THB cumulative within 24 hours require mandatory Suspicious Transaction Report (STR) filing within 7 business days.",
-        },
-        {
-          code: "AMLO-SEC-2024-01",
-          title: "Anti-Money Laundering Office Electronic Monitoring Directives",
-          category: "AML",
-          rawContent:
-            "Cross-border outbound settlements must undergo screening against designated sanction lists. Any detected account under investigation must trigger immediate transaction holding and officer review.",
-        },
-        {
-          code: "PDPA-SEC-2562",
-          title: "Personal Data Protection Act B.E. 2562 Financial Sector Guardrails",
-          category: "PDPA",
-          rawContent:
-            "Customer national identification numbers, unmasked credit card PANs, and unredacted biometric or contact logs shall not be stored in unencrypted form or passed to external third-party model inference endpoints without explicit masking.",
-        },
-      ];
-    }
+    // Powered by pgvector Cosine Distance with fallback to hybrid search
+    const retrievedPolicies = await searchPolicies({
+      query: sanitizedQuery,
+      category,
+      limit: 3,
+    });
 
     const policyKnowledgeBase = retrievedPolicies
       .map(

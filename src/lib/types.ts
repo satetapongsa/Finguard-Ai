@@ -86,6 +86,17 @@ export interface CompliancePolicyItem {
   createdAt: string;
 }
 
+export interface LedgerEntryItem {
+  id: string;
+  transactionId: string;
+  accountId: string;
+  entryType: "DEBIT" | "CREDIT";
+  amount: string;
+  balanceAfter: string;
+  currency: string;
+  createdAt: string;
+}
+
 export interface AuditLogItem {
   id: string;
   actorId: string | null;
@@ -93,13 +104,25 @@ export interface AuditLogItem {
   targetResource: string;
   resourceId: string | null;
   payloadHash: string;
+  previousHash: string | null;
+  entryHash: string;
   ipAddress: string | null;
   status: "SUCCESS" | "BLOCKED" | "ALERT";
   details: Record<string, unknown> | null;
   createdAt: string;
+  isIntegrityVerified?: boolean;
   actor?: {
     name: string | null;
     email: string;
     role: RoleType;
   } | null;
+}
+
+export interface AuditChainVerificationResult {
+  isValid: boolean;
+  totalBlocks: number;
+  genesisHash: string;
+  latestHash: string;
+  corruptedBlockId?: string;
+  error?: string;
 }

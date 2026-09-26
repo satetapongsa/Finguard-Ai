@@ -16,6 +16,7 @@ async function main() {
 
   // 1. Clean existing records
   await prisma.auditLog.deleteMany();
+  await prisma.ledgerEntry.deleteMany();
   await prisma.transaction.deleteMany();
   await prisma.financialAccount.deleteMany();
   await prisma.compliancePolicy.deleteMany();
@@ -229,17 +230,49 @@ async function main() {
     },
   ];
 
+  let previousChainHash = "0".repeat(64);
+
   for (const txn of sampleTransactions) {
     const createdTx = await prisma.transaction.create({
       data: txn,
     });
 
-    const hash = computeHash({
+    // Seed Balanced Double-Entry Ledger Entries
+    await prisma.ledgerEntry.createMany({
+      data: [
+        {
+          transactionId: createdTx.id,
+          accountId: createdTx.sourceAccountId,
+          entryType: "DEBIT",
+          amount: createdTx.amount,
+          balanceAfter: new Prisma.Decimal(1000000),
+          currency: createdTx.currency,
+          createdAt: createdTx.createdAt,
+        },
+        {
+          transactionId: createdTx.id,
+          accountId: createdTx.destinationAccountId,
+          entryType: "CREDIT",
+          amount: createdTx.amount,
+          balanceAfter: new Prisma.Decimal(2000000),
+          currency: createdTx.currency,
+          createdAt: createdTx.createdAt,
+        },
+      ],
+    });
+
+    const payloadHash = computeHash({
       txId: createdTx.id,
       amount: createdTx.amount.toString(),
       status: createdTx.status,
       timestamp: createdTx.createdAt,
     });
+
+    const timeStr = createdTx.createdAt.toISOString();
+    const entryHash = crypto
+      .createHash("sha256")
+      .update(`${previousChainHash}:${payloadHash}:TRANSACTION_EXECUTE:Transaction:${createdTx.id}:${timeStr}`)
+      .digest("hex");
 
     await prisma.auditLog.create({
       data: {
@@ -247,17 +280,25 @@ async function main() {
         actionType: "TRANSACTION_EXECUTE",
         targetResource: "Transaction",
         resourceId: createdTx.id,
-        payloadHash: hash,
+        payloadHash,
+        previousHash: previousChainHash,
+        entryHash,
         ipAddress: "192.168.1.104",
         status: txn.status === "FLAGGED" ? "ALERT" : "SUCCESS",
         details: {
           riskScore: txn.riskScore,
           riskReason: txn.riskReason,
           amount: txn.amount.toString(),
+          doubleEntry: {
+            isBalanced: true,
+            amount: txn.amount.toString(),
+          },
         },
         createdAt: createdTx.createdAt,
       },
     });
+
+    previousChainHash = entryHash;
   }
 
   console.log(`💳 Seeded ${sampleTransactions.length} Initial Transactions with Audit Logs.`);
