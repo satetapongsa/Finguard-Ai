@@ -11,8 +11,8 @@ import {
   UserCheck,
   Sun,
   Moon,
-  Database,
   PlusCircle,
+  UserPlus,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import type { RoleType } from "@/lib/types";
@@ -21,6 +21,7 @@ export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
+  const setCreateAccountOpen = useComplianceStore((s) => s.setCreateAccountOpen);
 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [activeRole, setActiveRole] = useState<RoleType>("COMPLIANCE_OFFICER");
@@ -107,9 +108,6 @@ export default function Navigation() {
             <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
               FinGuard <span className="bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">AI</span>
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/90 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-700/50 hidden sm:inline-block">
-              BFSI Enterprise
-            </span>
           </div>
         </Link>
 
@@ -138,6 +136,17 @@ export default function Navigation() {
 
         {/* Right: Controls & Indicator Bar */}
         <div className="flex items-center space-x-2 shrink-0">
+          {/* Create Account Button */}
+          <button
+            onClick={() => setCreateAccountOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm"
+            title="สร้างบัญชีใหม่สำหรับจำลองการโอนเงินสด"
+          >
+            <UserPlus className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+            <span className="hidden sm:inline">+ สร้างบัญชี</span>
+            <span className="sm:hidden">+ บัญชี</span>
+          </button>
+
           {/* Quick Transfer Button */}
           <button
             onClick={() => setQuickTransferOpen(true)}
@@ -225,6 +234,13 @@ export default function Navigation() {
             </Link>
           );
         })}
+        <button
+          onClick={() => setCreateAccountOpen(true)}
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-cyan-600 dark:text-cyan-400"
+        >
+          <UserPlus className="w-4 h-4 mb-0.5" />
+          <span>+ บัญชี</span>
+        </button>
         <button
           onClick={toggleTheme}
           aria-label="Toggle Theme"

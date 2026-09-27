@@ -40,18 +40,35 @@ export const AuditQuerySchema = z.object({
 export type AuditQueryInput = z.infer<typeof AuditQuerySchema>;
 
 // =========================================================
-// DOMAIN TYPES (BFSI & RISK)
+// DOMAIN TYPES (BFSI, RISK & MATHEMATICAL ANOMALY ENGINE)
 // =========================================================
 
 export type TransactionStatusType = "PENDING" | "APPROVED" | "FLAGGED" | "REJECTED";
 export type AccountStatusType = "ACTIVE" | "FROZEN" | "UNDER_INVESTIGATION" | "CLOSED";
 export type RoleType = "ADMIN" | "COMPLIANCE_OFFICER" | "AUDITOR";
 
+export interface MathAnomalyMetrics {
+  zScore: number;
+  mean: number;
+  stdDev: number;
+  thresholdRatio: number;
+  velocityScore: number;
+  smurfingRatio: number;
+  formulaEquation: string;
+  isGaussianOutlier: boolean;
+  classification:
+    | "NORMAL_TRANSACTION"
+    | "ELEVATED_SCRUTINY"
+    | "ANOMALY_HIGH_RISK"
+    | "CRITICAL_REGULATORY_BREACH";
+}
+
 export interface RiskEvaluationResult {
   riskScore: number; // 0.0 to 1.0
   riskReason: string;
   isHighRisk: boolean;
   flags: string[];
+  mathBreakdown?: MathAnomalyMetrics;
 }
 
 export interface TransactionWithAccounts {

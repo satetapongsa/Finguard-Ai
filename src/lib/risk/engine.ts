@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import prisma from "@/lib/prisma";
-import { RiskEvaluationResult } from "@/lib/types";
+import { RiskEvaluationResult, MathAnomalyMetrics } from "@/lib/types";
 
 export interface EnhancedRiskEvaluationResult extends RiskEvaluationResult {
   recommendedAction: "APPROVE" | "FLAG_FOR_REVIEW" | "REJECT_ANOMALY";
@@ -12,8 +12,9 @@ export interface EnhancedRiskEvaluationResult extends RiskEvaluationResult {
 }
 
 /**
- * Autonomous BFSI Risk Assessment & Interception Engine
- * Combines regulatory rules (BOT, AMLO) and velocity heuristics.
+ * Autonomous BFSI Risk Assessment & Mathematical Anomaly Interception Engine
+ * Combines regulatory rules (Bank of Thailand & AMLO), Gaussian Z-Score statistics,
+ * burst velocity, and structuring/smurfing heuristics.
  */
 export async function evaluateTransactionRisk(params: {
   sourceAccountId: string;
@@ -28,28 +29,34 @@ export async function evaluateTransactionRisk(params: {
   let burstCount5m = 0;
   let hourlyCount = 0;
   let cumulative24h = new Decimal(0);
+  let historicalMean = 150000;
+  let historicalStdDev = 120000;
+  let zScore = 0;
+  let isGaussianOutlier = false;
+  let velocityScore = 0;
+  let smurfingRatio = 0;
 
   // 1. Regulatory Amount Threshold Checks (Bank of Thailand & AMLO)
   // AMLO Mandate: Threshold >= 2,000,000 THB requires mandatory asset declaration
   if (amt.greaterThanOrEqualTo(2000000)) {
     score += 0.65;
-    flags.push("THRESHOLD_EXCEEDED_2M_THB: Mandatory AMLO Cash/Asset Reporting");
+    flags.push("THRESHOLD_EXCEEDED_2M_THB: เงื่อนไข ปปง. &ge; ฿2,000,000 (Mandatory AMLO STR Filing)");
   } else if (amt.greaterThanOrEqualTo(500000)) {
     // BOT Directive: Transactions >= 500,000 THB require elevated anomaly screening
     score += 0.35;
-    flags.push("THRESHOLD_EXCEEDED_500K_THB: BOT Elevated Transaction Alert");
+    flags.push("THRESHOLD_EXCEEDED_500K_THB: เงื่อนไข ธปท. &ge; ฿500,000 (BOT Elevated Transaction Alert)");
   } else if (amt.greaterThanOrEqualTo(200000)) {
     score += 0.15;
-    flags.push("MEDIUM_VALUE_TRANSFER");
+    flags.push("MEDIUM_VALUE_TRANSFER: รายการโอนขนาดกลาง &ge; ฿200,000 (Enhanced Monitoring)");
   }
 
   // 2. Transaction Type Specific Risk
   if (params.type === "CROSS_BORDER") {
     score += 0.25;
-    flags.push("CROSS_BORDER_SETTLEMENT: Heightened FATF Recommendation 16 scrutiny required");
+    flags.push("CROSS_BORDER_SETTLEMENT: ธุรกรรมข้ามแดนตามเกณฑ์ FATF Recommendation 16");
   }
 
-  // 3. Historical Velocity Bursts & Structuring Heuristics
+  // 3. Historical Velocity Bursts, Gaussian Statistics & Structuring Heuristics
   if (process.env.DATABASE_URL) {
     try {
       const now = Date.now();
@@ -58,7 +65,7 @@ export async function evaluateTransactionRisk(params: {
       const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000);
 
       // Query historical counts and volume for this source account
-      const [recent5m, recent1h, pastDayTxs] = await Promise.all([
+      const [recent5m, recent1h, pastDayTxs, allSourceTxs] = await Promise.all([
         prisma.transaction.count({
           where: {
             sourceAccountId: params.sourceAccountId,
@@ -78,6 +85,13 @@ export async function evaluateTransactionRisk(params: {
           },
           select: { amount: true },
         }),
+        prisma.transaction.findMany({
+          where: {
+            sourceAccountId: params.sourceAccountId,
+          },
+          select: { amount: true },
+          take: 50,
+        }),
       ]);
 
       burstCount5m = recent5m;
@@ -88,27 +102,47 @@ export async function evaluateTransactionRisk(params: {
         new Decimal(0)
       ).plus(amt);
 
-      // Heuristic A: Velocity Burst Anomaly (>= 3 transfers within 5 minutes)
+      // Mathematical Z-Score Calculation (Gaussian Distribution Anomaly: Z = (x - μ) / σ)
+      if (allSourceTxs.length >= 3) {
+        const amounts = allSourceTxs.map((t) => parseFloat(t.amount.toString()));
+        const sum = amounts.reduce((a, b) => a + b, 0);
+        historicalMean = sum / amounts.length;
+        const variance =
+          amounts.reduce((acc, val) => acc + Math.pow(val - historicalMean, 2), 0) /
+          amounts.length;
+        historicalStdDev = Math.max(1000, Math.sqrt(variance));
+      }
+
+      zScore = parseFloat(((params.amount - historicalMean) / historicalStdDev).toFixed(2));
+      if (zScore >= 2.5) {
+        isGaussianOutlier = true;
+        score += 0.25;
+        flags.push(
+          `MATHEMATICAL_GAUSSIAN_OUTLIER: Z-score = ${zScore} (&ge; 2.5σ ค่าเบี่ยงเบนทางคณิตศาสตร์จากพฤติกรรมเฉลี่ย ฿${historicalMean.toLocaleString(undefined, { maximumFractionDigits: 0 })})`
+        );
+      }
+
+      // Mathematical Velocity Burst Anomaly (>= 3 transfers within 5 minutes)
       if (burstCount5m >= 3) {
-        score += 0.45;
-        flags.push(`VELOCITY_BURST_ANOMALY: ${burstCount5m} rapid transactions detected in past 5 minutes`);
-      }
-
-      // Heuristic B: Sustained Hourly Velocity (>= 5 transfers in 1 hour)
-      if (hourlyCount >= 5) {
-        score += 0.35;
-        flags.push(`HIGH_HOURLY_VELOCITY: ${hourlyCount} transactions in past 60 minutes`);
+        velocityScore = 0.45;
+        score += velocityScore;
+        flags.push(`VELOCITY_BURST_ANOMALY: ตรวจพบการโอนเงินถี่ผิดปกติ ${burstCount5m} ครั้งในรอบ 5 นาที`);
+      } else if (hourlyCount >= 5) {
+        velocityScore = 0.35;
+        score += velocityScore;
+        flags.push(`HIGH_HOURLY_VELOCITY: ความถี่การโอนต่อชั่วโมงสูง ${hourlyCount} ครั้งในรอบ 60 นาที`);
       } else if (hourlyCount >= 3) {
-        score += 0.15;
-        flags.push(`MODERATE_HOURLY_VELOCITY: ${hourlyCount} transactions in past 60 minutes`);
+        velocityScore = 0.15;
+        score += velocityScore;
+        flags.push(`MODERATE_HOURLY_VELOCITY: ความถี่การโอนปานกลาง ${hourlyCount} ครั้งในรอบ 60 นาที`);
       }
 
-      // Heuristic C: Structuring / Smurfing Detection
-      // Transfer is individually below 500k, but 24h cumulative exceeds 2M AMLO threshold
+      // Mathematical Structuring / Smurfing Anomaly Ratio: (Cumulative 24h / 2,000,000 AMLO Threshold)
+      smurfingRatio = parseFloat(cumulative24h.dividedBy(2000000).toFixed(2));
       if (amt.lessThan(500000) && cumulative24h.greaterThanOrEqualTo(2000000)) {
         score += 0.40;
         flags.push(
-          `STRUCTURING_ANOMALY: 24h cumulative volume ฿${cumulative24h.toFixed(2)} exceeds AMLO 2M threshold across split transfers`
+          `STRUCTURING_SMURFING_ANOMALY: ซอยยอดย่อยสะสม 24 ชม. รวม ฿${cumulative24h.toFixed(2)} เกินเกณฑ์ ปปง. ฿2M (Smurfing Index = ${smurfingRatio})`
         );
       }
     } catch (_e) {
@@ -130,12 +164,12 @@ export async function evaluateTransactionRisk(params: {
 
       if (sourceAcc?.status === "UNDER_INVESTIGATION") {
         score += 0.50;
-        flags.push("ACCOUNT_UNDER_INVESTIGATION: Source account is under regulatory audit");
+        flags.push("ACCOUNT_UNDER_INVESTIGATION: บัญชีต้นทางอยู่ในรายชื่อเฝ้าระวังทางกฎหมาย (Watchlist)");
       }
 
       if (destAcc?.status === "UNDER_INVESTIGATION") {
         score += 0.55;
-        flags.push("BENEFICIARY_UNDER_INVESTIGATION: Destination counterparty flagged in AML watchlist");
+        flags.push("BENEFICIARY_UNDER_INVESTIGATION: บัญชีปลายทางต้องสงสัยอยู่ในรายชื่อ AML Watchlist");
       }
     } catch (_e) {
       // Fallback if not available
@@ -147,16 +181,46 @@ export async function evaluateTransactionRisk(params: {
   const isHighRisk = finalScore >= 0.65;
 
   let recommendedAction: "APPROVE" | "FLAG_FOR_REVIEW" | "REJECT_ANOMALY" = "APPROVE";
+  let classification:
+    | "NORMAL_TRANSACTION"
+    | "ELEVATED_SCRUTINY"
+    | "ANOMALY_HIGH_RISK"
+    | "CRITICAL_REGULATORY_BREACH" = "NORMAL_TRANSACTION";
+
   if (finalScore >= 0.85) {
     recommendedAction = "REJECT_ANOMALY";
+    classification = "CRITICAL_REGULATORY_BREACH";
   } else if (finalScore >= 0.65) {
     recommendedAction = "FLAG_FOR_REVIEW";
+    classification = "ANOMALY_HIGH_RISK";
+  } else if (finalScore >= 0.35) {
+    classification = "ELEVATED_SCRUTINY";
+  } else {
+    classification = "NORMAL_TRANSACTION";
   }
 
-  let riskReason = flags.length > 0 ? flags.join(" | ") : "Normal domestic transaction parameters verified";
+  let riskReason =
+    flags.length > 0
+      ? flags.join(" | ")
+      : "การโอนเงินเป็นไปตามเกณฑ์ปกติ ไม่พบความผิดปกติทางคณิตศาสตร์และกฎระเบียบ";
   if (isHighRisk) {
-    riskReason = `[HIGH RISK ESCALATION] ${riskReason}`;
+    riskReason = `[ความเสี่ยงสูง/ผิดปกติ] ${riskReason}`;
   }
+
+  const thresholdRatio = parseFloat(amt.dividedBy(2000000).toFixed(2));
+  const formulaEquation = `R = min(1.0, 0.05(Base) + ${(finalScore - 0.05).toFixed(2)}(Risk Factors)) = ${(finalScore * 100).toFixed(0)}%`;
+
+  const mathBreakdown: MathAnomalyMetrics = {
+    zScore,
+    mean: parseFloat(historicalMean.toFixed(2)),
+    stdDev: parseFloat(historicalStdDev.toFixed(2)),
+    thresholdRatio,
+    velocityScore,
+    smurfingRatio,
+    formulaEquation,
+    isGaussianOutlier,
+    classification,
+  };
 
   return {
     riskScore: finalScore,
@@ -164,6 +228,7 @@ export async function evaluateTransactionRisk(params: {
     isHighRisk,
     recommendedAction,
     flags,
+    mathBreakdown,
     velocityMetrics: {
       burstCount5m,
       hourlyCount,

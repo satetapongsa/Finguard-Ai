@@ -14,9 +14,12 @@ import {
   Zap,
   ShieldCheck,
   Scale,
+  Calculator,
+  UserPlus,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import { sanitizeText, inspectPiiPresence } from "@/lib/security/guardrails";
+import { MathAnomalyMetrics } from "@/lib/types";
 
 interface AccountOption {
   id: string;
@@ -30,6 +33,7 @@ interface AccountOption {
 export default function QuickTransferModal() {
   const isOpen = useComplianceStore((s) => s.isQuickTransferOpen);
   const setIsOpen = useComplianceStore((s) => s.setQuickTransferOpen);
+  const setCreateAccountOpen = useComplianceStore((s) => s.setCreateAccountOpen);
 
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [sourceId, setSourceId] = useState("");
@@ -47,6 +51,8 @@ export default function QuickTransferModal() {
       riskScore: number;
       riskReason: string;
       isHighRisk: boolean;
+      flags?: string[];
+      mathBreakdown?: MathAnomalyMetrics;
     };
     auditHash?: string;
   } | null>(null);
@@ -55,10 +61,10 @@ export default function QuickTransferModal() {
     fetch("/api/accounts")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && data.data.length >= 2) {
+        if (data.success && data.data.length >= 1) {
           setAccounts(data.data);
-          if (!sourceId) setSourceId(data.data[0].id);
-          if (!destinationId) setDestinationId(data.data[1].id);
+          if (!sourceId && data.data[0]) setSourceId(data.data[0].id);
+          if (!destinationId && data.data[1]) setDestinationId(data.data[1].id);
         }
       })
       .catch((err) => console.error("Could not load accounts:", err));
@@ -85,6 +91,22 @@ export default function QuickTransferModal() {
   const sourceAfterBal = sourceCurrentBal - numAmount;
   const destAfterBal = destCurrentBal + numAmount;
   const isOverdraft = sourceAfterBal < 0;
+
+  // Real-time Mathematical Condition Evaluation Preview
+  const isAmloMandate = numAmount >= 2000000;
+  const isBotAlert = numAmount >= 500000 && numAmount < 2000000;
+  const isWatchlistInvolved =
+    sourceAccount?.status === "UNDER_INVESTIGATION" ||
+    destAccount?.status === "UNDER_INVESTIGATION";
+
+  let estimatedRiskScore = 0.05;
+  if (isAmloMandate) estimatedRiskScore += 0.65;
+  else if (isBotAlert) estimatedRiskScore += 0.35;
+  else if (numAmount >= 200000) estimatedRiskScore += 0.15;
+
+  if (type === "CROSS_BORDER") estimatedRiskScore += 0.25;
+  if (isWatchlistInvolved) estimatedRiskScore += 0.5;
+  estimatedRiskScore = Math.min(1.0, estimatedRiskScore);
 
   // Scenario Presets
   const applyScenario = (preset: {
@@ -172,10 +194,10 @@ export default function QuickTransferModal() {
             </div>
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-base tracking-tight">
-                ACID Double-Entry Ledger Transfer
+                จำลองการโอนเงินสด & ตรวจจับความผิดปกติ (ACID Ledger Transfer)
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Serializable balance guard, heuristic risk index & SHA-256 audit log
+                ระบบคำนวณคณิตศาสตร์และ AI ตรวจจับธุรกรรมผิดปกติตามเกณฑ์ ธปท./ปปง.
               </p>
             </div>
           </div>
@@ -189,10 +211,24 @@ export default function QuickTransferModal() {
 
         {/* Quick Simulation Scenario Pills */}
         <div className="mt-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80">
-          <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center space-x-1.5">
-            <Sparkles className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
-            <span>Click Scenario to Pre-fill Simulation:</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+              <Sparkles className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
+              <span>เลือกกรณีทดสอบสำเร็จรูป (Quick Scenarios):</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setCreateAccountOpen(true);
+              }}
+              className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center space-x-1"
+            >
+              <UserPlus className="w-3 h-3" />
+              <span>+ สร้างบัญชีใหม่</span>
+            </button>
           </div>
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-semibold">
             <button
               type="button"
@@ -201,8 +237,8 @@ export default function QuickTransferModal() {
                   amount: "45000",
                   type: "TRANSFER",
                   note: "Invoice payment to supplier. Beneficiary PAN: 4111 2222 3333 4444",
-                  sourceIndex: 2,
-                  destIndex: 3,
+                  sourceIndex: 0,
+                  destIndex: 1,
                 })
               }
               className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition text-left cursor-pointer border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none hover:border-cyan-400/50"
@@ -211,7 +247,7 @@ export default function QuickTransferModal() {
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span className="font-bold text-[10px] text-slate-900 dark:text-white">฿45K ปกติ</span>
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400">Low Risk Domestic</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">โอนปกติ ยอดต่ำกว่าเกณฑ์</div>
             </button>
 
             <button
@@ -221,8 +257,8 @@ export default function QuickTransferModal() {
                   amount: "750000",
                   type: "DISBURSEMENT",
                   note: "Contractor milestone. Citizen ID: 1-1004-99882-12-9",
-                  sourceIndex: 2,
-                  destIndex: 3,
+                  sourceIndex: 0,
+                  destIndex: 1,
                 })
               }
               className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition text-left cursor-pointer border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none hover:border-amber-400/50"
@@ -231,7 +267,7 @@ export default function QuickTransferModal() {
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
                 <span className="font-bold text-[10px] text-slate-900 dark:text-white">฿750K ธปท.</span>
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400">&gt; 500K Anomaly</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">&ge; ฿500K แจ้งเตือน</div>
             </button>
 
             <button
@@ -251,7 +287,7 @@ export default function QuickTransferModal() {
                 <span className="w-2 h-2 rounded-full bg-rose-500" />
                 <span className="font-bold text-[10px] text-slate-900 dark:text-white">฿2.5M ปปง.</span>
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400">Mandatory STR</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">&ge; ฿2M รายงาน ปปง. (STR)</div>
             </button>
 
             <button
@@ -260,9 +296,9 @@ export default function QuickTransferModal() {
                 applyScenario({
                   amount: "350000",
                   type: "CROSS_BORDER",
-                  note: "Wire to overseas shell entity. Recipient ID: 1-1004-99882-12-9",
-                  sourceIndex: 2,
-                  destIndex: 4, // Offshore Apex (Flagged)
+                  note: "Wire to overseas entity. Recipient ID: 1-1004-99882-12-9",
+                  sourceIndex: 0,
+                  destIndex: 4,
                 })
               }
               className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition text-left cursor-pointer border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none hover:border-purple-400/50"
@@ -271,7 +307,7 @@ export default function QuickTransferModal() {
                 <span className="w-2 h-2 rounded-full bg-purple-500" />
                 <span className="font-bold text-[10px] text-slate-900 dark:text-white">เฝ้าระวัง</span>
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400">Watchlist Entity</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">บัญชีใน Watchlist</div>
             </button>
           </div>
         </div>
@@ -283,7 +319,7 @@ export default function QuickTransferModal() {
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
                 <Wallet className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                <span>Source Account (Debit)</span>
+                <span>บัญชีผู้โอน (Source Account - Debit)</span>
               </label>
               <select
                 value={sourceId}
@@ -292,7 +328,7 @@ export default function QuickTransferModal() {
               >
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-                    {acc.accountNumber} - {acc.accountName}
+                    {acc.accountName} ({acc.accountNumber}) - ฿{Number(acc.balance).toLocaleString()}
                   </option>
                 ))}
               </select>
@@ -301,7 +337,7 @@ export default function QuickTransferModal() {
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
                 <Building2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <span>Destination (Credit)</span>
+                <span>บัญชีผู้รับ (Destination - Credit)</span>
               </label>
               <select
                 value={destinationId}
@@ -310,7 +346,7 @@ export default function QuickTransferModal() {
               >
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-                    {acc.accountNumber} - {acc.accountName}
+                    {acc.accountName} ({acc.accountNumber}) - ฿{Number(acc.balance).toLocaleString()}
                   </option>
                 ))}
               </select>
@@ -320,8 +356,15 @@ export default function QuickTransferModal() {
           {/* Amount & Type */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Amount (THB)
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>จำนวนเงินโอน (Amount THB)</span>
+                {numAmount >= 2000000 ? (
+                  <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 font-mono">ปปง. &ge; ฿2M (ผิดปกติ/ต้องรายงาน)</span>
+                ) : numAmount >= 500000 ? (
+                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 font-mono">ธปท. &ge; ฿500K (เฝ้าระวังพิเศษ)</span>
+                ) : (
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 font-mono">ปกติ (&lt; ฿500K)</span>
+                )}
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold font-mono">฿</span>
@@ -339,36 +382,44 @@ export default function QuickTransferModal() {
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Transaction Type
+                ประเภทธุรกรรม (Transaction Type)
               </label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as "TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER")}
                 className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
               >
-                <option value="TRANSFER" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Domestic Transfer</option>
-                <option value="SETTLEMENT" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Inter-Bank Settlement</option>
-                <option value="DISBURSEMENT" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Corporate Disbursement</option>
-                <option value="CROSS_BORDER" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">Cross-Border Wire Transfer</option>
+                <option value="TRANSFER" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">โอนเงินในประเทศ (Domestic Transfer)</option>
+                <option value="SETTLEMENT" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">เคลียริ่งระหว่างสถาบัน (Inter-Bank Settlement)</option>
+                <option value="DISBURSEMENT" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">เบิกจ่ายองค์กร (Corporate Disbursement)</option>
+                <option value="CROSS_BORDER" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">โอนเงินข้ามประเทศ (Cross-Border Wire)</option>
               </select>
             </div>
           </div>
 
-          {/* Double-Entry Balance Calculation Visualizer */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+          {/* Mathematical Anomaly & Double-Entry Calculation Box */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
               <span className="flex items-center space-x-1.5">
-                <Scale className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                <span>ACID Balance Adjustment Preview:</span>
+                <Calculator className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                <span>การประเมินความเสี่ยงทางคณิตศาสตร์ & AI (Real-Time Heuristic Math):</span>
               </span>
-              <span className={`font-mono text-[10px] ${isOverdraft ? "text-rose-600 dark:text-rose-400 font-bold" : "text-emerald-700 dark:text-emerald-400"}`}>
-                {isOverdraft ? "Overdraft Rejected" : "Balanced: Debits = Credits"}
+              <span
+                className={`font-mono text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  estimatedRiskScore >= 0.65
+                    ? "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                    : estimatedRiskScore >= 0.35
+                    ? "bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                    : "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                }`}
+              >
+                {(estimatedRiskScore * 100).toFixed(0)}% Estimated Risk ({estimatedRiskScore >= 0.65 ? "โอนผิดปกติ" : estimatedRiskScore >= 0.35 ? "เฝ้าระวัง" : "โอนปกติ"})
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
               <div className="p-2 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-500 block">Debit (Source)</span>
+                <span className="text-[10px] text-slate-500 block">หักบัญชีต้นทาง (Debit)</span>
                 <span className="text-slate-700 dark:text-slate-300">฿{sourceCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 <div className={`font-bold mt-0.5 ${sourceAfterBal < 0 ? "text-rose-600 dark:text-rose-400" : "text-cyan-700 dark:text-cyan-300"}`}>
                   → ฿{sourceAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -376,7 +427,7 @@ export default function QuickTransferModal() {
               </div>
 
               <div className="p-2 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] text-slate-500 block">Credit (Destination)</span>
+                <span className="text-[10px] text-slate-500 block">เพิ่มบัญชีปลายทาง (Credit)</span>
                 <span className="text-slate-700 dark:text-slate-300">฿{destCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 <div className="font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">
                   → ฿{destAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -388,11 +439,11 @@ export default function QuickTransferModal() {
           {/* Note & Real-time PDPA Masking Preview */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-              <span>Transaction Note / Metadata</span>
+              <span>บันทึกช่วยจำ (PDPA Real-Time Masking)</span>
               {piiInspection.hasPii && (
                 <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono font-bold flex items-center space-x-1">
                   <Lock className="w-3 h-3" />
-                  <span>PII Detected: {piiInspection.detectedTypes.join(", ")}</span>
+                  <span>ตรวจพบข้อมูลส่วนบุคคล: {piiInspection.detectedTypes.join(", ")}</span>
                 </span>
               )}
             </label>
@@ -400,14 +451,14 @@ export default function QuickTransferModal() {
               rows={2}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Enter reference note with Thai ID, card numbers, phone or email..."
+              placeholder="ระบุบันทึกช่วยจำ เช่น เลขบัตรประชาชน หรือเลขบัตรเครดิต..."
               className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500 transition"
             />
 
             {/* Sanitized Live Preview */}
             <div className="p-2.5 rounded-xl bg-cyan-50 dark:bg-cyan-950/20 border border-cyan-200 dark:border-cyan-800/40 text-[11px] text-cyan-900 dark:text-cyan-200">
               <span className="text-[9px] uppercase tracking-wider text-cyan-700 dark:text-cyan-400 font-bold block mb-0.5">
-                PDPA Auto-Masked Ingress Preview (Sent to LLM & Audit):
+                PDPA Auto-Masked Ingress Preview (ส่งเข้า AI & บันทึกบล็อกเชน):
               </span>
               <span className="font-mono">{maskedNotePreview}</span>
             </div>
@@ -422,14 +473,30 @@ export default function QuickTransferModal() {
                   : "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-700/70 text-rose-900 dark:text-rose-300"
               }`}
             >
-              <div className="flex items-center space-x-2 font-bold">
-                {result.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />}
-                <span>{result.success ? "Settlement Successful" : "Execution Blocked"}</span>
+              <div className="flex items-center justify-between font-bold">
+                <div className="flex items-center space-x-2">
+                  {result.success ? <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />}
+                  <span>{result.success ? "ทำรายการและตัดยอดสำเร็จ" : "รายการถูกระงับ"}</span>
+                </div>
+                {result.riskAssessment && (
+                  <span className="font-mono text-[10px]">
+                    Risk: {(result.riskAssessment.riskScore * 100).toFixed(0)}%
+                  </span>
+                )}
               </div>
               <p className="mt-1 text-[11px] text-slate-700 dark:text-slate-300">{result.message || result.error}</p>
+              {result.riskAssessment?.flags && result.riskAssessment.flags.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {result.riskAssessment.flags.map((flag, idx) => (
+                    <div key={idx} className="text-[10px] font-mono text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-1 rounded border border-amber-200 dark:border-amber-800/50">
+                      &bull; {flag}
+                    </div>
+                  ))}
+                </div>
+              )}
               {result.auditHash && (
                 <div className="mt-2 text-[10px] font-mono text-cyan-800 dark:text-cyan-300 bg-white dark:bg-slate-950/80 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-500">Audit Checksum: </span>
+                  <span className="text-slate-500">บล็อกเชน Hash: </span>
                   {result.auditHash}
                 </div>
               )}
@@ -443,7 +510,7 @@ export default function QuickTransferModal() {
               onClick={() => setIsOpen(false)}
               className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent transition cursor-pointer"
             >
-              Cancel
+              ยกเลิก
             </button>
             <button
               type="submit"
@@ -457,12 +524,12 @@ export default function QuickTransferModal() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Committing to Ledger...</span>
+                  <span>กำลังบันทึกลงสมุดบัญชี...</span>
                 </>
               ) : (
                 <>
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Commit ACID Transfer</span>
+                  <span>ยืนยันโอนเงินสด ACID</span>
                 </>
               )}
             </button>

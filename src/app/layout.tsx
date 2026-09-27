@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Navigation from "@/components/Navigation";
 import QuickTransferModal from "@/components/QuickTransferModal";
+import CreateAccountModal from "@/components/CreateAccountModal";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default function RootLayout({
             {children}
           </main>
           <QuickTransferModal />
+          <CreateAccountModal />
 
           {/* Footer */}
           <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-[#03060c] py-6 text-xs text-slate-500 dark:text-slate-400 transition-colors duration-200">
