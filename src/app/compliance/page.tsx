@@ -445,7 +445,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
                 }`}
               >
                 {isBot && (
-                  <div className="w-7 h-7 rounded-xl bg-cyan-950/80 border border-cyan-700/60 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
+                  <div className="w-7 h-7 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700/60 flex items-center justify-center text-cyan-700 dark:text-cyan-400 shrink-0 mt-0.5">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
@@ -461,15 +461,15 @@ Select a transaction or regulatory policy on the left, or query below.`,
                     {msg.content}
                   </div>
 
-                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/40 pt-1.5">
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800/40 pt-1.5">
                     <span className="font-mono text-[10px]">{msg.timestamp}</span>
                     {isBot && msg.content && (
                       <button
                         onClick={() => copyToClipboard(msg.content, msg.id)}
-                        className="opacity-0 group-hover:opacity-100 transition p-1 hover:text-white flex items-center space-x-1 cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 transition p-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center space-x-1 cursor-pointer"
                       >
                         {copiedId === msg.id ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}

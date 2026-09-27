@@ -260,10 +260,6 @@ html:not(.dark) [class*="bg-blue-900"], html.light [class*="bg-blue-900"] {
 }
 
 /* Text Contrasts */
-html:not(.dark) .text-white, html.light .text-white {
-  color: #0f172a !important;
-}
-
 html:not(.dark) .text-slate-100, html.light .text-slate-100,
 html:not(.dark) .text-slate-200, html.light .text-slate-200 {
   color: #0f172a !important;
@@ -279,40 +275,6 @@ html:not(.dark) .text-slate-400, html.light .text-slate-400 {
 
 html:not(.dark) .text-slate-500, html.light .text-slate-500 {
   color: #64748b !important;
-}
-
-/* Preserve crisp white text on vibrant action buttons and gradient pills */
-html:not(.dark) button[class*="bg-cyan-"],
-html:not(.dark) button[class*="bg-blue-"],
-html:not(.dark) button[class*="bg-emerald-"],
-html:not(.dark) button[class*="bg-rose-"],
-html:not(.dark) button[class*="bg-gradient-"],
-html:not(.dark) button[class*="from-cyan-"],
-html:not(.dark) button[class*="from-blue-"],
-html:not(.dark) button[class*="bg-gradient-"] *,
-html:not(.dark) button[class*="from-cyan-"] *,
-html:not(.dark) button[class*="from-blue-"] *,
-html:not(.dark) a[class*="bg-gradient-"],
-html:not(.dark) a[class*="bg-gradient-"] *,
-html:not(.dark) .btn-primary,
-html:not(.dark) .btn-primary *,
-html:not(.dark) .badge-solid,
-html.light button[class*="bg-cyan-"],
-html.light button[class*="bg-blue-"],
-html.light button[class*="bg-emerald-"],
-html.light button[class*="bg-rose-"],
-html.light button[class*="bg-gradient-"],
-html.light button[class*="from-cyan-"],
-html.light button[class*="from-blue-"],
-html.light button[class*="bg-gradient-"] *,
-html.light button[class*="from-cyan-"] *,
-html.light button[class*="from-blue-"] *,
-html.light a[class*="bg-gradient-"],
-html.light a[class*="bg-gradient-"] *,
-html.light .btn-primary,
-html.light .btn-primary *,
-html.light .badge-solid {
-  color: #ffffff !important;
 }
 
 /* Typography Overrides */
