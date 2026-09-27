@@ -12,12 +12,15 @@ import {
   Sun,
   Moon,
   Database,
+  PlusCircle,
 } from "lucide-react";
+import { useComplianceStore } from "@/store/compliance-store";
 import type { RoleType } from "@/lib/types";
 
 export default function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
+  const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [activeRole, setActiveRole] = useState<RoleType>("COMPLIANCE_OFFICER");
@@ -135,6 +138,17 @@ export default function Navigation() {
 
         {/* Right: Controls & Indicator Bar */}
         <div className="flex items-center space-x-2 shrink-0">
+          {/* Quick Transfer Button */}
+          <button
+            onClick={() => setQuickTransferOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25 transition cursor-pointer active:scale-95"
+            title="เปิดหน้าต่างโอนเงินจำลองตัดยอดแบบ Double-Entry ACID ลงฐานข้อมูลจริง"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">+ โอนเงินจำลอง</span>
+            <span className="sm:hidden">+ โอน</span>
+          </button>
+
           {/* Neon Database Status Badge */}
           <div
             title={dbStatus.connected ? "Connected to Neon Serverless PostgreSQL" : "Connecting to Neon Database..."}
