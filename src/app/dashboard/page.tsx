@@ -256,15 +256,9 @@ export default function DashboardPage() {
       {/* Top Banner / Hero Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800/80">
         <div>
-          <div className="flex items-center space-x-2.5 flex-wrap gap-y-1.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Autonomous Compliance Command Center
-            </h1>
-            <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-950/80 dark:text-cyan-300 dark:border-cyan-700/60 whitespace-nowrap">
-              <Zap className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
-              <span>Real-Time Engine</span>
-            </span>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Autonomous Compliance Command Center
+          </h1>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 font-medium max-w-2xl">
             Double-entry ACID settlement with real-time heuristic AMLO & Bank of Thailand risk scoring.
           </p>
