@@ -8,16 +8,11 @@ import {
   LayoutDashboard,
   Bot,
   FileCheck,
-  PlusCircle,
-  Database,
-  Lock,
   UserCheck,
-  Activity,
-  Server,
   Sun,
   Moon,
+  Database,
 } from "lucide-react";
-import { useComplianceStore } from "@/store/compliance-store";
 import type { RoleType } from "@/lib/types";
 
 export default function Navigation() {
@@ -86,42 +81,37 @@ export default function Navigation() {
   };
 
   const navItems = [
-    { label: "แดชบอร์ด & โอนเงิน (Dashboard)", href: "/dashboard", icon: LayoutDashboard, badge: "Live" },
-    { label: "ตรวจกฎหมาย AI (Compliance)", href: "/compliance", icon: Bot, badge: "BOT/AMLO" },
-    { label: "ประวัติบล็อกเชน (Audit)", href: "/audit", icon: FileCheck, badge: "SHA-256" },
+    { label: "แดชบอร์ด (Dashboard)", href: "/dashboard", icon: LayoutDashboard },
+    { label: "ตรวจกฎหมาย (Compliance)", href: "/compliance", icon: Bot },
+    { label: "บล็อกเชน (Audit Trail)", href: "/audit", icon: FileCheck },
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-[#040810]/90 backdrop-blur-xl transition-colors duration-200 shadow-sm dark:shadow-none">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-        {/* Brand / Logo */}
-        <Link href="/dashboard" className="flex items-center space-x-3.5 group">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-[#040810]/95 backdrop-blur-xl transition-colors duration-200 shadow-sm dark:shadow-none">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+        {/* Left: Brand Logo */}
+        <Link href="/dashboard" className="flex items-center space-x-3 group shrink-0">
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:shadow-cyan-400/40 transition duration-300">
-              <ShieldAlert className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-cyan-500/25 group-hover:shadow-cyan-400/40 transition duration-300">
+              <ShieldAlert className="w-4.5 h-4.5 text-white" />
             </div>
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
             </span>
           </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-lg text-slate-900 dark:text-white tracking-tight">
-                FinGuard <span className="bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">AI</span>
-              </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/90 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-700/50">
-                BFSI Enterprise
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
-              Autonomous Compliance & Transaction Intelligence
-            </p>
+          <div className="flex items-center space-x-2">
+            <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
+              FinGuard <span className="bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">AI</span>
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/90 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-700/50 hidden sm:inline-block">
+              BFSI Enterprise
+            </span>
           </div>
         </Link>
 
-        {/* Navigation Tabs */}
-        <nav className="hidden md:flex items-center space-x-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80">
+        {/* Center: Horizontal Navigation Menu */}
+        <nav className="hidden md:flex items-center space-x-1 p-1 rounded-2xl bg-slate-100/90 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/90">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -130,36 +120,25 @@ export default function Navigation() {
                 key={item.href}
                 href={item.href}
                 prefetch={true}
-                className={`relative flex items-center space-x-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-150 whitespace-nowrap ${
                   isActive
-                    ? "bg-white dark:bg-gradient-to-r dark:from-cyan-950/80 dark:to-slate-800 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 shadow-sm"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50"
+                    ? "bg-white text-cyan-800 border border-cyan-200 shadow-sm dark:bg-gradient-to-r dark:from-cyan-950/90 dark:to-slate-800/90 dark:text-cyan-300 dark:border-cyan-500/30"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800/60"
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? "text-cyan-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-cyan-600 dark:text-cyan-400" : "text-slate-500 dark:text-slate-400"}`} />
                 <span>{item.label}</span>
-                {item.badge && (
-                  <span
-                    className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
-                      isActive
-                        ? "bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30"
-                        : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400"
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Action & Status Indicator */}
-        <div className="flex items-center space-x-2.5">
+        {/* Right: Controls & Indicator Bar */}
+        <div className="flex items-center space-x-2 shrink-0">
           {/* Neon Database Status Badge */}
           <div
             title={dbStatus.connected ? "Connected to Neon Serverless PostgreSQL" : "Connecting to Neon Database..."}
-            className={`hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
               dbStatus.connected
                 ? "bg-emerald-50 dark:bg-emerald-950/70 border-emerald-200 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-300"
                 : "bg-amber-50 dark:bg-amber-950/70 border-amber-200 dark:border-amber-700/60 text-amber-800 dark:text-amber-300"
@@ -170,42 +149,41 @@ export default function Navigation() {
                 dbStatus.connected ? "bg-emerald-500 animate-pulse" : "bg-amber-500 animate-pulse"
               }`}
             />
-            <span className="font-mono text-[10px]">
-              {dbStatus.connected ? "Neon DB: Online" : "Neon DB: Connecting"}
+            <span className="font-mono text-[10px] hidden sm:inline">
+              {dbStatus.connected ? "Neon DB" : "Connecting..."}
             </span>
           </div>
 
           {/* RBAC Role Switcher */}
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs font-medium">
-            <UserCheck className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold hidden sm:inline">Role:</span>
+          <div className="flex items-center space-x-1 px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs">
+            <UserCheck className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
             <select
               value={activeRole}
               onChange={(e) => handleRoleChange(e.target.value as RoleType)}
-              className="bg-transparent text-cyan-700 dark:text-cyan-300 text-xs font-bold focus:outline-none cursor-pointer"
+              className="bg-transparent text-slate-800 dark:text-cyan-300 text-xs font-bold focus:outline-none cursor-pointer pr-1"
             >
               <option value="ADMIN" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">ADMIN</option>
               <option value="COMPLIANCE_OFFICER" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">OFFICER</option>
-              <option value="AUDITOR" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">AUDITOR (Read-only)</option>
+              <option value="AUDITOR" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">AUDITOR</option>
             </select>
           </div>
 
           {/* Dark / Light Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            aria-label="Toggle Dark or Light Mode"
+            aria-label="Toggle Theme"
             title={theme === "dark" ? "เปลี่ยนเป็นธีมสว่าง (Light Mode)" : "เปลี่ยนเป็นธีมมืด (Dark Mode)"}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-xs font-bold transition cursor-pointer text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+            className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-xs font-bold transition cursor-pointer text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white flex items-center space-x-1"
           >
             {theme === "dark" ? (
               <>
                 <Sun className="w-4 h-4 text-amber-400" />
-                <span className="hidden sm:inline text-[11px]">สว่าง</span>
+                <span className="hidden lg:inline text-[11px]">สว่าง</span>
               </>
             ) : (
               <>
                 <Moon className="w-4 h-4 text-cyan-600" />
-                <span className="hidden sm:inline text-[11px]">มืด</span>
+                <span className="hidden lg:inline text-[11px]">มืด</span>
               </>
             )}
           </button>

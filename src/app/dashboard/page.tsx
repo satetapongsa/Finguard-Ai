@@ -278,45 +278,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Neon Database Connection & Simulation Action Bar */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-50/90 via-sky-50/80 to-blue-50/90 dark:from-slate-900/90 dark:via-[#071328]/80 dark:to-slate-900/90 border border-cyan-200/80 dark:border-cyan-900/40 shadow-sm dark:shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center space-x-3.5">
-          <div
-            className={`w-10 h-10 rounded-2xl flex items-center justify-center border shadow-md ${
-              dbStatus.connected
-                ? "bg-emerald-950/60 border-emerald-700/60 text-emerald-400"
-                : "bg-amber-950/60 border-amber-700/60 text-amber-400"
-            }`}
-          >
-            <Database className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-sm text-slate-900 dark:text-white">Database:</span>
-              <span
-                className={`text-xs font-bold font-mono px-2 py-0.5 rounded-md ${
-                  dbStatus.connected
-                    ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/60"
-                    : "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800/60"
-                }`}
-              >
-                {dbStatus.connected ? "Neon PostgreSQL (Live)" : "Neon: Connecting..."}
-              </span>
-              {dbStatus.latencyMs && (
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono hidden sm:inline">
-                  {dbStatus.latencyMs}ms
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-              {dbStatus.connected
-                ? "Active double-entry persistence on Neon serverless PostgreSQL with pgvector."
-                : "Connecting to Neon Serverless PostgreSQL database..."}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Executive KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* KPI 1 */}
