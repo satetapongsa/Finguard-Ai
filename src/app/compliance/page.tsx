@@ -154,7 +154,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
             ? {
                 ...msg,
                 content:
-                  "⚠️ *Communication error with Compliance Agent engine. Please retry.*",
+                  "*Communication error with Compliance Agent engine. Please retry.*",
               }
             : msg
         )
@@ -503,7 +503,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
             }
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
-            🇹🇭 เกณฑ์ ธปท. 500K THB
+            เกณฑ์ ธปท. 500K THB
           </button>
           <button
             onClick={() =>
@@ -513,7 +513,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
             }
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
-            🇹🇭 รายงาน ปปง. (STR) &gt; 2M
+            รายงาน ปปง. (STR) &gt; 2M
           </button>
           <button
             onClick={() =>
@@ -523,7 +523,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
             }
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
-            🇹🇭 กฎหมาย PDPA & PII Masking
+            กฎหมาย PDPA & PII Masking
           </button>
           <button
             onClick={() =>
@@ -533,7 +533,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
             }
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
-            🇹🇭 ตรวจจับบัญชีม้า & Velocity Burst
+            ตรวจจับบัญชีม้า & Velocity Burst
           </button>
         </div>
 

@@ -193,7 +193,7 @@ export default function QuickTransferModal() {
             <Sparkles className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
             <span>Click Scenario to Pre-fill Simulation:</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[11px] font-semibold">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-semibold">
             <button
               type="button"
               onClick={() =>
@@ -205,9 +205,12 @@ export default function QuickTransferModal() {
                   destIndex: 3,
                 })
               }
-              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition text-left cursor-pointer border border-slate-200 dark:border-slate-700/60"
+              className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition text-left cursor-pointer border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none hover:border-cyan-400/50"
             >
-              <div className="text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">Standard ฿45K</div>
+              <div className="flex items-center space-x-1.5 mb-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="font-bold text-[10px] text-slate-900 dark:text-white">฿45K ปกติ</span>
+              </div>
               <div className="text-[9px] text-slate-500 dark:text-slate-400">Low Risk Domestic</div>
             </button>
 
@@ -222,10 +225,13 @@ export default function QuickTransferModal() {
                   destIndex: 3,
                 })
               }
-              className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800/40 transition text-left cursor-pointer"
+              className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition text-left cursor-pointer border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none hover:border-amber-400/50"
             >
-              <div className="text-amber-700 dark:text-amber-400 text-[10px] font-bold">BOT ฿750K</div>
-              <div className="text-[9px] text-amber-600 dark:text-amber-300/70">&gt; 500K Anomaly</div>
+              <div className="flex items-center space-x-1.5 mb-0.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="font-bold text-[10px] text-slate-900 dark:text-white">฿750K ธปท.</span>
+              </div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">&gt; 500K Anomaly</div>
             </button>
 
             <button
@@ -239,10 +245,13 @@ export default function QuickTransferModal() {
                   destIndex: 1,
                 })
               }
-              className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-900 dark:text-rose-200 border border-rose-200 dark:border-rose-800/40 transition text-left cursor-pointer"
+              className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition text-left cursor-pointer border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none hover:border-rose-400/50"
             >
-              <div className="text-rose-700 dark:text-rose-400 text-[10px] font-bold">AMLO ฿2.5M</div>
-              <div className="text-[9px] text-rose-600 dark:text-rose-300/70">Mandatory STR</div>
+              <div className="flex items-center space-x-1.5 mb-0.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+                <span className="font-bold text-[10px] text-slate-900 dark:text-white">฿2.5M ปปง.</span>
+              </div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Mandatory STR</div>
             </button>
 
             <button
@@ -256,10 +265,13 @@ export default function QuickTransferModal() {
                   destIndex: 4, // Offshore Apex (Flagged)
                 })
               }
-              className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-800/40 transition text-left cursor-pointer"
+              className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 transition text-left cursor-pointer border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none hover:border-purple-400/50"
             >
-              <div className="text-purple-700 dark:text-purple-400 text-[10px] font-bold">Watchlist Account</div>
-              <div className="text-[9px] text-purple-600 dark:text-purple-300/70">Flagged Counterparty</div>
+              <div className="flex items-center space-x-1.5 mb-0.5">
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+                <span className="font-bold text-[10px] text-slate-900 dark:text-white">เฝ้าระวัง</span>
+              </div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Watchlist Entity</div>
             </button>
           </div>
         </div>
@@ -350,7 +362,7 @@ export default function QuickTransferModal() {
                 <span>ACID Balance Adjustment Preview:</span>
               </span>
               <span className={`font-mono text-[10px] ${isOverdraft ? "text-rose-600 dark:text-rose-400 font-bold" : "text-emerald-700 dark:text-emerald-400"}`}>
-                {isOverdraft ? "❌ Overdraft Rejected" : "✓ Balanced: Debits = Credits"}
+                {isOverdraft ? "Overdraft Rejected" : "Balanced: Debits = Credits"}
               </span>
             </div>
 
