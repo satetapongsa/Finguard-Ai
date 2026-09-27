@@ -85,8 +85,8 @@ export default function Navigation() {
 
   const navItems = [
     { label: "แดชบอร์ด (Dashboard)", href: "/dashboard", icon: LayoutDashboard },
-    { label: "ตรวจกฎหมาย (Compliance)", href: "/compliance", icon: Bot },
     { label: "บล็อกเชน (Audit Trail)", href: "/audit", icon: FileCheck },
+    { label: "ตรวจกฎหมาย (Compliance)", href: "/compliance", icon: Bot },
   ];
 
   return (
