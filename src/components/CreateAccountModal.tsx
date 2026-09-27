@@ -75,7 +75,7 @@ export default function CreateAccountModal() {
       if (res.ok && data.success) {
         setResult({
           success: true,
-          message: "สร้างบัญชีการเงินใหม่ในฐานข้อมูล Neon เรียบร้อยแล้ว",
+          message: "New financial account provisioned in Neon PostgreSQL ledger",
           account: data.account,
         });
         // Dispatch global event for live tables & selector updates
@@ -89,13 +89,13 @@ export default function CreateAccountModal() {
       } else {
         setResult({
           success: false,
-          error: data.error || "ไม่สามารถสร้างบัญชีได้",
+          error: data.error || "Unable to provision financial account",
         });
       }
     } catch (_err) {
       setResult({
         success: false,
-        error: "เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์",
+        error: "Network error communicating with database server",
       });
     } finally {
       setLoading(false);
@@ -116,10 +116,10 @@ export default function CreateAccountModal() {
             </div>
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-base tracking-tight">
-                สร้างบัญชีการเงินใหม่ (Create Account)
+                Provision Financial Account
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                เพิ่มบัญชีสำหรับจำลองการโอนเงินสดและทดสอบระบบความเสี่ยง
+                Create double-entry ledger accounts for settlement simulation & risk validation
               </p>
             </div>
           </div>
@@ -135,14 +135,14 @@ export default function CreateAccountModal() {
         <div className="mt-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80">
           <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center space-x-1.5">
             <Sparkles className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
-            <span>เลือกประเภทบัญชีสำเร็จรูป (Quick Presets):</span>
+            <span>Select Account Preset (Quick Setup):</span>
           </div>
           <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold">
             <button
               type="button"
               onClick={() =>
                 applyPreset({
-                  name: "นาย สมชาย บัญชีเงินเดือนบุคคล",
+                  name: "John Doe (Retail Payroll Account)",
                   balance: "150000",
                   status: "ACTIVE",
                   prefix: "IND",
@@ -152,16 +152,16 @@ export default function CreateAccountModal() {
             >
               <div className="flex items-center space-x-1.5 mb-0.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="font-bold text-[10px] text-slate-900 dark:text-white">บุคคลทั่วไป (฿150K)</span>
+                <span className="font-bold text-[10px] text-slate-900 dark:text-white">Individual (฿150K)</span>
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400">บัญชีบุคคลธรรมดาปกติ</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Retail checking account</div>
             </button>
 
             <button
               type="button"
               onClick={() =>
                 applyPreset({
-                  name: "บจก. สยาม คอร์ปอเรท เทรดดิ้ง",
+                  name: "Siam Corporate Holdings Ltd.",
                   balance: "8500000",
                   status: "ACTIVE",
                   prefix: "CORP",
@@ -171,16 +171,16 @@ export default function CreateAccountModal() {
             >
               <div className="flex items-center space-x-1.5 mb-0.5">
                 <span className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="font-bold text-[10px] text-slate-900 dark:text-white">นิติบุคคล (฿8.5M)</span>
+                <span className="font-bold text-[10px] text-slate-900 dark:text-white">Corporate (฿8.5M)</span>
               </div>
-              <div className="text-[9px] text-slate-500 dark:text-slate-400">ยอดเงินสูงสำหรับธุรกิจ</div>
+              <div className="text-[9px] text-slate-500 dark:text-slate-400">Enterprise liquidity pool</div>
             </button>
 
             <button
               type="button"
               onClick={() =>
                 applyPreset({
-                  name: "นาย สิทธิชัย (บัญชีเฝ้าระวัง AML)",
+                  name: "Offshore Apex Entity (Watchlist)",
                   balance: "60000",
                   status: "UNDER_INVESTIGATION",
                   prefix: "WATCH",
@@ -190,7 +190,7 @@ export default function CreateAccountModal() {
             >
               <div className="flex items-center space-x-1.5 mb-0.5">
                 <span className="w-2 h-2 rounded-full bg-purple-500" />
-                <span className="font-bold text-[10px] text-slate-900 dark:text-white">บัญชีเฝ้าระวัง (฿60K)</span>
+                <span className="font-bold text-[10px] text-slate-900 dark:text-white">Watchlist (฿60K)</span>
               </div>
               <div className="text-[9px] text-slate-500 dark:text-slate-400">AML Watchlist Flag</div>
             </button>
@@ -209,7 +209,7 @@ export default function CreateAccountModal() {
             >
               <div className="flex items-center space-x-1.5 mb-0.5">
                 <span className="w-2 h-2 rounded-full bg-cyan-500" />
-                <span className="font-bold text-[10px] text-slate-900 dark:text-white">กองทุนสภาพคล่อง (฿50M)</span>
+                <span className="font-bold text-[10px] text-slate-900 dark:text-white">Treasury Vault (฿50M)</span>
               </div>
               <div className="text-[9px] text-slate-500 dark:text-slate-400">Inter-Bank Liquidity</div>
             </button>
@@ -221,13 +221,13 @@ export default function CreateAccountModal() {
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
               <Building2 className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-              <span>ชื่อบัญชี (Account Name) *</span>
+              <span>Account Name *</span>
             </label>
             <input
               type="text"
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
-              placeholder="เช่น นาย สมชาย ใจดี หรือ บจก. ตัวอย่างการค้า"
+              placeholder="e.g. John Doe Commercial Trading Ltd."
               required
               className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500 transition"
             />
@@ -237,20 +237,20 @@ export default function CreateAccountModal() {
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
                 <Wallet className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <span>เลขที่บัญชี (Account Number)</span>
+                <span>Account Number (Optional)</span>
               </label>
               <input
                 type="text"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="เว้นว่างเพื่อให้ระบบสร้างอัตโนมัติ"
+                placeholder="Auto-generated if empty"
                 className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-cyan-500 transition"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                ยอดเงินเริ่มต้น (Initial Balance THB)
+                Initial Balance (THB)
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold font-mono">฿</span>
@@ -270,7 +270,7 @@ export default function CreateAccountModal() {
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
               <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-              <span>สถานะบัญชี (Account Status)</span>
+              <span>Account Status</span>
             </label>
             <select
               value={status}
@@ -280,13 +280,13 @@ export default function CreateAccountModal() {
               className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
             >
               <option value="ACTIVE" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-                ACTIVE (บัญชีปกติพร้อมทำธุรกรรม)
+                ACTIVE (Standard operational account)
               </option>
               <option value="UNDER_INVESTIGATION" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-                UNDER_INVESTIGATION (บัญชีเฝ้าระวัง AML Watchlist)
+                UNDER_INVESTIGATION (AML Watchlist elevated scrutiny)
               </option>
               <option value="FROZEN" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-                FROZEN (บัญชีถูกอายัด - ห้ามโอนออก)
+                FROZEN (Account locked by regulatory injunction)
               </option>
             </select>
           </div>
@@ -306,15 +306,15 @@ export default function CreateAccountModal() {
                 ) : (
                   <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 )}
-                <span>{result.success ? "สร้างบัญชีสำเร็จ" : "เกิดข้อผิดพลาด"}</span>
+                <span>{result.success ? "Account Provisioned" : "Provisioning Error"}</span>
               </div>
               <p className="mt-1 text-[11px] text-slate-700 dark:text-slate-300">
                 {result.message || result.error}
               </p>
               {result.account && (
                 <div className="mt-2 text-[10px] font-mono text-cyan-800 dark:text-cyan-300 bg-white dark:bg-slate-950/80 p-2 rounded-lg border border-slate-200 dark:border-slate-800 space-y-0.5">
-                  <div>เลขบัญชี: {result.account.accountNumber}</div>
-                  <div>ยอดเงินคงเหลือ: ฿{Number(result.account.balance).toLocaleString()}</div>
+                  <div>Account Number: {result.account.accountNumber}</div>
+                  <div>Ledger Balance: ฿{Number(result.account.balance).toLocaleString()}</div>
                 </div>
               )}
             </div>
@@ -327,7 +327,7 @@ export default function CreateAccountModal() {
               onClick={() => setIsOpen(false)}
               className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-transparent transition cursor-pointer"
             >
-              ยกเลิก (Cancel)
+              Cancel
             </button>
             <button
               type="submit"
@@ -337,12 +337,12 @@ export default function CreateAccountModal() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>กำลังบันทึกลง Neon DB...</span>
+                  <span>Committing to Ledger...</span>
                 </>
               ) : (
                 <>
                   <PlusCircle className="w-4 h-4" />
-                  <span>ยืนยันสร้างบัญชี (Create Account)</span>
+                  <span>Create Account</span>
                 </>
               )}
             </button>

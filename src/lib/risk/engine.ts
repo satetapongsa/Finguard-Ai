@@ -40,20 +40,20 @@ export async function evaluateTransactionRisk(params: {
   // AMLO Mandate: Threshold >= 2,000,000 THB requires mandatory asset declaration
   if (amt.greaterThanOrEqualTo(2000000)) {
     score += 0.65;
-    flags.push("THRESHOLD_EXCEEDED_2M_THB: เงื่อนไข ปปง. &ge; ฿2,000,000 (Mandatory AMLO STR Filing)");
+    flags.push("THRESHOLD_EXCEEDED_2M_THB: AMLO Mandate >= ฿2,000,000 (Mandatory AMLO STR Filing)");
   } else if (amt.greaterThanOrEqualTo(500000)) {
     // BOT Directive: Transactions >= 500,000 THB require elevated anomaly screening
     score += 0.35;
-    flags.push("THRESHOLD_EXCEEDED_500K_THB: เงื่อนไข ธปท. &ge; ฿500,000 (BOT Elevated Transaction Alert)");
+    flags.push("THRESHOLD_EXCEEDED_500K_THB: Bank of Thailand Directive >= ฿500,000 (BOT Elevated Alert)");
   } else if (amt.greaterThanOrEqualTo(200000)) {
     score += 0.15;
-    flags.push("MEDIUM_VALUE_TRANSFER: รายการโอนขนาดกลาง &ge; ฿200,000 (Enhanced Monitoring)");
+    flags.push("MEDIUM_VALUE_TRANSFER: Medium-tier transfer >= ฿200,000 (Enhanced Monitoring)");
   }
 
   // 2. Transaction Type Specific Risk
   if (params.type === "CROSS_BORDER") {
     score += 0.25;
-    flags.push("CROSS_BORDER_SETTLEMENT: ธุรกรรมข้ามแดนตามเกณฑ์ FATF Recommendation 16");
+    flags.push("CROSS_BORDER_SETTLEMENT: Cross-border transfer subject to FATF Recommendation 16");
   }
 
   // 3. Historical Velocity Bursts, Gaussian Statistics & Structuring Heuristics
@@ -118,7 +118,7 @@ export async function evaluateTransactionRisk(params: {
         isGaussianOutlier = true;
         score += 0.25;
         flags.push(
-          `MATHEMATICAL_GAUSSIAN_OUTLIER: Z-score = ${zScore} (&ge; 2.5σ ค่าเบี่ยงเบนทางคณิตศาสตร์จากพฤติกรรมเฉลี่ย ฿${historicalMean.toLocaleString(undefined, { maximumFractionDigits: 0 })})`
+          `MATHEMATICAL_GAUSSIAN_OUTLIER: Z-score = ${zScore} (>= 2.5σ standard deviation anomaly from account mean ฿${historicalMean.toLocaleString(undefined, { maximumFractionDigits: 0 })})`
         );
       }
 
@@ -126,15 +126,15 @@ export async function evaluateTransactionRisk(params: {
       if (burstCount5m >= 3) {
         velocityScore = 0.45;
         score += velocityScore;
-        flags.push(`VELOCITY_BURST_ANOMALY: ตรวจพบการโอนเงินถี่ผิดปกติ ${burstCount5m} ครั้งในรอบ 5 นาที`);
+        flags.push(`VELOCITY_BURST_ANOMALY: Velocity surge detected (${burstCount5m} rapid transactions in past 5 min)`);
       } else if (hourlyCount >= 5) {
         velocityScore = 0.35;
         score += velocityScore;
-        flags.push(`HIGH_HOURLY_VELOCITY: ความถี่การโอนต่อชั่วโมงสูง ${hourlyCount} ครั้งในรอบ 60 นาที`);
+        flags.push(`HIGH_HOURLY_VELOCITY: High transaction frequency (${hourlyCount} transactions in past 60 min)`);
       } else if (hourlyCount >= 3) {
         velocityScore = 0.15;
         score += velocityScore;
-        flags.push(`MODERATE_HOURLY_VELOCITY: ความถี่การโอนปานกลาง ${hourlyCount} ครั้งในรอบ 60 นาที`);
+        flags.push(`MODERATE_HOURLY_VELOCITY: Moderate transaction frequency (${hourlyCount} transactions in past 60 min)`);
       }
 
       // Mathematical Structuring / Smurfing Anomaly Ratio: (Cumulative 24h / 2,000,000 AMLO Threshold)
@@ -142,7 +142,7 @@ export async function evaluateTransactionRisk(params: {
       if (amt.lessThan(500000) && cumulative24h.greaterThanOrEqualTo(2000000)) {
         score += 0.40;
         flags.push(
-          `STRUCTURING_SMURFING_ANOMALY: ซอยยอดย่อยสะสม 24 ชม. รวม ฿${cumulative24h.toFixed(2)} เกินเกณฑ์ ปปง. ฿2M (Smurfing Index = ${smurfingRatio})`
+          `STRUCTURING_SMURFING_ANOMALY: 24h cumulative volume ฿${cumulative24h.toFixed(2)} exceeds AMLO ฿2M threshold across split transfers (Smurfing Ratio = ${smurfingRatio})`
         );
       }
     } catch (_e) {
@@ -164,12 +164,12 @@ export async function evaluateTransactionRisk(params: {
 
       if (sourceAcc?.status === "UNDER_INVESTIGATION") {
         score += 0.50;
-        flags.push("ACCOUNT_UNDER_INVESTIGATION: บัญชีต้นทางอยู่ในรายชื่อเฝ้าระวังทางกฎหมาย (Watchlist)");
+        flags.push("ACCOUNT_UNDER_INVESTIGATION: Source account is under regulatory watchlist audit");
       }
 
       if (destAcc?.status === "UNDER_INVESTIGATION") {
         score += 0.55;
-        flags.push("BENEFICIARY_UNDER_INVESTIGATION: บัญชีปลายทางต้องสงสัยอยู่ในรายชื่อ AML Watchlist");
+        flags.push("BENEFICIARY_UNDER_INVESTIGATION: Destination counterparty flagged in AML watchlist");
       }
     } catch (_e) {
       // Fallback if not available
@@ -202,9 +202,9 @@ export async function evaluateTransactionRisk(params: {
   let riskReason =
     flags.length > 0
       ? flags.join(" | ")
-      : "การโอนเงินเป็นไปตามเกณฑ์ปกติ ไม่พบความผิดปกติทางคณิตศาสตร์และกฎระเบียบ";
+      : "Standard transaction parameters verified with zero mathematical anomalies";
   if (isHighRisk) {
-    riskReason = `[ความเสี่ยงสูง/ผิดปกติ] ${riskReason}`;
+    riskReason = `[HIGH RISK ESCALATION] ${riskReason}`;
   }
 
   const thresholdRatio = parseFloat(amt.dividedBy(2000000).toFixed(2));

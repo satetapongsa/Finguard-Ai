@@ -498,42 +498,42 @@ Select a transaction or regulatory policy on the left, or query below.`,
           <button
             onClick={() =>
               handleSendMessage(
-                "ตรวจสอบกฎหมายและระเบียบธนาคารแห่งประเทศไทย (BOT-NO-12/2566) สำหรับธุรกรรมโอนเงินเกิน 500,000 บาท ว่ามีข้อกำหนดอย่างไรบ้าง"
+                "Review Bank of Thailand directive (BOT-NO-12/2566) for transactions exceeding ฿500,000 and summarize mandatory reporting guidelines."
               )
             }
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
-            เกณฑ์ ธปท. 500K THB
+            BOT ฿500K Directive
           </button>
           <button
             onClick={() =>
               handleSendMessage(
-                "ขอคำแนะนำการจัดทำรายงานธุรกรรมที่มีเหตุอันควรสงสัย (STR) ตาม พ.ร.บ. ป้องกันและปราบปรามการฟอกเงิน (AMLO-SEC-2024-01) สำหรับธุรกรรมเกิน 2,000,000 บาท"
+                "Provide step-by-step guidance on filing Suspicious Transaction Reports (STR) under AMLO-SEC-2024-01 for transactions >= ฿2,000,000."
               )
             }
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
-            รายงาน ปปง. (STR) &gt; 2M
+            AMLO STR &gt;= ฿2M
           </button>
           <button
             onClick={() =>
               handleSendMessage(
-                "ตรวจสอบข้อกำหนด PDPA B.E. 2562 ในภาคการเงินเกี่ยวกับการ Mask ข้อมูลเลขบัตรประชาชน 13 หลัก และเลขบัญชีธนาคาร"
+                "Verify PDPA B.E. 2562 financial compliance requirements regarding automated PII redaction for national IDs and PAN numbers."
               )
             }
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
-            กฎหมาย PDPA & PII Masking
+            PDPA PII Masking
           </button>
           <button
             onClick={() =>
               handleSendMessage(
-                "วิเคราะห์ความเสี่ยงบัญชีม้าและการตรวจจับความผิดปกติของธุรกรรมแบบถี่ผิดปกติ (Velocity Burst Anomaly Detection)"
+                "Analyze velocity burst anomaly detection criteria and mule account heuristics for rapid sequential transactions."
               )
             }
             className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/40 text-slate-700 dark:text-slate-300 font-medium shrink-0 cursor-pointer transition hover:text-slate-900 dark:hover:text-white shadow-sm dark:shadow-none"
           >
-            ตรวจจับบัญชีม้า & Velocity Burst
+            Mule &amp; Velocity Burst
           </button>
         </div>
 

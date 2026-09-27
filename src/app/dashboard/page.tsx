@@ -67,7 +67,7 @@ export default function DashboardPage() {
   const [liveDestId, setLiveDestId] = useState("");
   const [liveAmount, setLiveAmount] = useState("50000");
   const [liveType, setLiveType] = useState<"TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER">("TRANSFER");
-  const [liveNote, setLiveNote] = useState("ชำระค่าบริการคู่ค้า เลขประจำตัว 1-1004-99882-12-9");
+  const [liveNote, setLiveNote] = useState("Corporate vendor settlement ID 1-1004-99882-12-9");
   const [isExecutingLive, setIsExecutingLive] = useState(false);
   const [liveReceipt, setLiveReceipt] = useState<{
     id: string;
@@ -269,26 +269,26 @@ export default function DashboardPage() {
           <button
             onClick={() => setCreateAccountOpen(true)}
             className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap"
-            title="สร้างบัญชีใหม่สำหรับจำลองการโอนเงินสด"
+            title="Create a new account for live transaction simulation"
           >
             <UserPlus className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-            <span>สร้างบัญชี</span>
+            <span>Create Account</span>
           </button>
 
           <button
             onClick={() => setQuickTransferOpen(true)}
             className="inline-flex items-center space-x-1.5 h-10 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25 transition cursor-pointer active:scale-95 whitespace-nowrap"
-            title="เปิดฟอร์มจำลองการโอนเงินตัดยอด Double-Entry ACID ลงฐานข้อมูล"
+            title="Open live double-entry ACID money transfer modal"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>โอนเงินจำลอง</span>
+            <span>Transfer Funds</span>
           </button>
 
           <button
             onClick={loadData}
             disabled={loading}
             className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none transition cursor-pointer whitespace-nowrap"
-            title="ซิงค์ข้อมูลสมุดบัญชีล่าสุด"
+            title="Sync latest ledger state from database"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-600 dark:text-cyan-400" : ""}`} />
             <span>Sync Ledger</span>
@@ -409,7 +409,7 @@ export default function DashboardPage() {
               className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/60 dark:hover:bg-cyan-900/80 text-cyan-800 dark:text-cyan-300 text-xs font-bold border border-cyan-300 dark:border-cyan-700/70 transition cursor-pointer self-start sm:self-auto"
             >
               <UserPlus className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-              <span>+ สร้างบัญชีใหม่</span>
+              <span>+ Create Account</span>
             </button>
           </div>
 
@@ -459,7 +459,7 @@ export default function DashboardPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* LIVE INTERACTIVE TRANSFER STUDIO (โอนเงินสดและตรวจกฎหมายเรียลไทม์)          */}
+      {/* LIVE INTERACTIVE TRANSFER STUDIO (Real-Time Double-Entry & Compliance)    */}
       {/* ========================================================================= */}
       {accounts.length >= 2 && (
         <div className="glass-panel rounded-3xl border border-slate-200 dark:border-cyan-800/80 p-6 shadow-xl dark:shadow-2xl relative overflow-hidden bg-white dark:bg-gradient-to-b dark:from-[#061022] dark:to-[#040914]">
@@ -475,28 +475,28 @@ export default function DashboardPage() {
               <div>
                 <div className="flex items-center space-x-2">
                   <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    ศูนย์จำลองการโอนเงินสด & ตรวจสอบกฎหมาย (Live Money Transfer Studio)
+                    Live Money Transfer & Compliance Studio
                   </h2>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-mono">
                     Neon DB Connected
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-                  ทดสอบโอนเงินจริง ตัดยอดแบบ Double-Entry ACID และตรวจจับความเสี่ยง ธปท./ปปง./PDPA แบบเรียลไทม์
+                  Execute live ACID double-entry transfers with instantaneous BOT / AMLO / PDPA compliance scoring
                 </p>
               </div>
             </div>
 
             {/* Scenario Quick Buttons */}
             <div className="flex items-center flex-wrap gap-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-0.5">เคสทดสอบ:</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-0.5">Presets:</span>
               <button
                 type="button"
                 onClick={() =>
                   applyLivePreset(
                     "45000",
                     "TRANSFER",
-                    "ชำระค่าบริการคู่ค้า เลขประจำตัว 1-1004-99882-12-9",
+                    "Corporate vendor settlement ID 1-1004-99882-12-9",
                     0,
                     1
                   )
@@ -504,7 +504,7 @@ export default function DashboardPage() {
                 className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>฿45K ปกติ</span>
+                <span>฿45K Standard</span>
               </button>
               <button
                 type="button"
@@ -512,7 +512,7 @@ export default function DashboardPage() {
                   applyLivePreset(
                     "650000",
                     "DISBURSEMENT",
-                    "เบิกจ่ายงบประมาณโครงการ เลขประจำตัว 1-1004-99882-12-9",
+                    "Project capital disbursement ID 1-1004-99882-12-9",
                     0,
                     1
                   )
@@ -520,7 +520,7 @@ export default function DashboardPage() {
                 className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
               >
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>฿650K ธปท.</span>
+                <span>฿650K BOT Alert</span>
               </button>
               <button
                 type="button"
@@ -528,7 +528,7 @@ export default function DashboardPage() {
                   applyLivePreset(
                     "2500000",
                     "CROSS_BORDER",
-                    "โอนทุนข้ามแดน แจ้ง ปปง. เลขประจำตัว 1-1004-99882-12-9",
+                    "Cross-border wire transfer AMLO declaration ID 1-1004-99882-12-9",
                     0,
                     1
                   )
@@ -536,7 +536,7 @@ export default function DashboardPage() {
                 className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
               >
                 <span className="w-2 h-2 rounded-full bg-rose-500" />
-                <span>฿2.5M ปปง. (STR)</span>
+                <span>฿2.5M AMLO (STR)</span>
               </button>
               <button
                 type="button"
@@ -544,7 +544,7 @@ export default function DashboardPage() {
                   applyLivePreset(
                     "350000",
                     "CROSS_BORDER",
-                    "โอนเงินไปยังบัญชีเป้าหมายเฝ้าระวัง เลขประจำตัว 1-1004-99882-12-9",
+                    "High-risk beneficiary transfer ID 1-1004-99882-12-9",
                     0,
                     4
                   )
@@ -552,7 +552,7 @@ export default function DashboardPage() {
                 className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
               >
                 <span className="w-2 h-2 rounded-full bg-purple-500" />
-                <span>เฝ้าระวัง (Watchlist)</span>
+                <span>Watchlist Entity</span>
               </button>
             </div>
           </div>
@@ -566,10 +566,10 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between text-xs">
                   <label className="font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center space-x-1.5">
                     <Wallet className="w-3.5 h-3.5" />
-                    <span>บัญชีผู้โอน (Source Account - Debit)</span>
+                    <span>Source Account (Debit -)</span>
                   </label>
                   <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                    ยอดปัจจุบัน: ฿{sourceCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    Current: ฿{sourceCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <select
@@ -584,7 +584,7 @@ export default function DashboardPage() {
                   ))}
                 </select>
                 <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
-                  <span className="text-slate-500">ยอดคงเหลือหลังโอน:</span>
+                  <span className="text-slate-500">Projected Balance:</span>
                   <span className={`font-bold ${sourceAfterBal < 0 ? "text-rose-600 dark:text-rose-400" : "text-cyan-700 dark:text-cyan-300"}`}>
                     ฿{sourceAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
@@ -606,10 +606,10 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between text-xs">
                   <label className="font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
                     <Building2 className="w-3.5 h-3.5" />
-                    <span>บัญชีผู้รับ (Destination Account - Credit)</span>
+                    <span>Destination Account (Credit +)</span>
                   </label>
                   <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                    ยอดปัจจุบัน: ฿{destCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    Current: ฿{destCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <select
@@ -624,7 +624,7 @@ export default function DashboardPage() {
                   ))}
                 </select>
                 <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
-                  <span className="text-slate-500">ยอดคงเหลือหลังรับ:</span>
+                  <span className="text-slate-500">Projected Balance:</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">
                     ฿{destAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
@@ -637,13 +637,13 @@ export default function DashboardPage() {
               {/* Amount */}
               <div className="md:col-span-4 space-y-1.5">
                 <label className="text-xs font-bold text-slate-800 dark:text-white flex items-center justify-between">
-                  <span>จำนวนเงินโอน (THB)</span>
+                  <span>Transfer Amount (THB)</span>
                   {numLiveAmount >= 2000000 ? (
-                    <span className="text-rose-600 dark:text-rose-400 font-mono text-[10px] font-bold">ปปง. &ge; ฿2M STR</span>
+                    <span className="text-rose-600 dark:text-rose-400 font-mono text-[10px] font-bold">AMLO &ge; ฿2M STR</span>
                   ) : numLiveAmount >= 500000 ? (
-                    <span className="text-amber-600 dark:text-amber-400 font-mono text-[10px] font-bold">ธปท. &gt; ฿500K Alert</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-mono text-[10px] font-bold">BOT &gt; ฿500K Alert</span>
                   ) : (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-bold">ปกติ (Standard)</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-bold">Standard</span>
                   )}
                 </label>
                 <div className="relative">
@@ -662,27 +662,27 @@ export default function DashboardPage() {
 
               {/* Transfer Type */}
               <div className="md:col-span-3 space-y-1.5">
-                <label className="text-xs font-bold text-slate-800 dark:text-white">ประเภทธุรกรรม</label>
+                <label className="text-xs font-bold text-slate-800 dark:text-white">Transaction Category</label>
                 <select
                   value={liveType}
                   onChange={(e) => setLiveType(e.target.value as "TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER")}
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/90 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-semibold"
                 >
-                  <option value="TRANSFER">โอนเงินในประเทศ (Domestic Transfer)</option>
-                  <option value="SETTLEMENT">เคลียริ่งระหว่างสถาบัน (Inter-Bank Settlement)</option>
-                  <option value="DISBURSEMENT">เบิกจ่ายองค์กร (Corporate Disbursement)</option>
-                  <option value="CROSS_BORDER">โอนเงินต่างประเทศ (Cross-Border Wire)</option>
+                  <option value="TRANSFER">Domestic Fund Transfer</option>
+                  <option value="SETTLEMENT">Inter-Bank Clearing Settlement</option>
+                  <option value="DISBURSEMENT">Corporate Treasury Disbursement</option>
+                  <option value="CROSS_BORDER">Cross-Border Wire Transfer</option>
                 </select>
               </div>
 
               {/* Note with Real-Time PDPA Inspection */}
               <div className="md:col-span-5 space-y-1.5">
                 <label className="text-xs font-bold text-slate-800 dark:text-white flex items-center justify-between">
-                  <span>บันทึกช่วยจำ / เลขบัตรประชาชน (PDPA Live Masking)</span>
+                  <span>Memo / National ID / PII (PDPA Live Masking)</span>
                   {livePiiInspection.hasPii && (
                     <span className="text-[10px] text-cyan-700 dark:text-cyan-400 font-mono font-bold flex items-center space-x-1">
                       <Lock className="w-3 h-3" />
-                      <span>ตรวจพบข้อมูลส่วนบุคคล</span>
+                      <span>PII Detected</span>
                     </span>
                   )}
                 </label>
@@ -690,7 +690,7 @@ export default function DashboardPage() {
                   type="text"
                   value={liveNote}
                   onChange={(e) => setLiveNote(e.target.value)}
-                  placeholder="พิมพ์เลขบัตรประชาชน 13 หลัก หรือเลขบัตรเครดิต..."
+                  placeholder="Enter 13-digit Thai National ID, card numbers, or transaction memo..."
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/90 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 transition"
                 />
               </div>
@@ -701,12 +701,12 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
                 <div>
-                  <span className="font-bold text-cyan-900 dark:text-cyan-300">PDPA Guardrail ทำงานแบบเรียลไทม์: </span>
+                  <span className="font-bold text-cyan-900 dark:text-cyan-300">PDPA Guardrail Live Redaction: </span>
                   <span className="font-mono text-cyan-950 dark:text-cyan-100">{liveMaskedPreview}</span>
                 </div>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-100 dark:bg-cyan-900/60 text-cyan-850 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-700/50 shrink-0 font-bold">
-                Auto-Masked ก่อนบันทึกจริง
+                Auto-Masked Pre-Persistence
               </span>
             </div>
 
@@ -714,9 +714,9 @@ export default function DashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
               <div className="flex items-center space-x-2 text-xs font-mono">
                 <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-slate-600 dark:text-slate-400">การันตีสมดุล Double-Entry: </span>
+                <span className="text-slate-600 dark:text-slate-400">Double-Entry Guarantee: </span>
                 <span className={`font-bold ${isLiveOverdraft ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                  {isLiveOverdraft ? "ยอดเงินไม่พอ (Overdraft Rejected)" : "Debit = Credit (Net Zero Delta)"}
+                  {isLiveOverdraft ? "Insufficient Funds (Overdraft Rejected)" : "Debit = Credit (Net Zero Delta)"}
                 </span>
               </div>
 
@@ -732,12 +732,12 @@ export default function DashboardPage() {
                 {isExecutingLive ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>กำลังตัดยอดและบันทึกลง Neon DB...</span>
+                    <span>Settling ACID Ledger on Neon DB...</span>
                   </>
                 ) : (
                   <>
                     <Zap className="w-4 h-4 text-cyan-300" />
-                    <span>ยืนยันการโอนเงินสดจริง (Execute Live ACID Transfer)</span>
+                    <span>Execute Live ACID Transfer</span>
                   </>
                 )}
               </button>
@@ -745,7 +745,7 @@ export default function DashboardPage() {
           </form>
 
           {/* ========================================================================= */}
-          {/* OFFICIAL TRANSACTION RECEIPT SLIP (สลิปยืนยันการทำธุรกรรมจริง)              */}
+          {/* OFFICIAL TRANSACTION RECEIPT SLIP (Official Settlement Receipt)           */}
           {/* ========================================================================= */}
           {liveReceipt && (
             <div className="mt-6 p-5 rounded-2xl bg-emerald-50/90 dark:bg-[#030712] border-2 border-emerald-400 dark:border-emerald-500/60 shadow-xl dark:shadow-2xl animate-in fade-in duration-300 space-y-4">
@@ -756,10 +756,10 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                      สลิปยืนยันการทำรายการโอนเงินสำเร็จ (Official Transaction Receipt)
+                      Official Transaction Settlement Receipt
                     </h3>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                      ตัดยอดจริงลง Neon Serverless PostgreSQL &bull; รหัสอ้างอิง: <span className="font-mono text-cyan-700 dark:text-cyan-300 font-bold">{liveReceipt.id}</span>
+                      Settled on Neon Serverless PostgreSQL &bull; Reference: <span className="font-mono text-cyan-700 dark:text-cyan-300 font-bold">{liveReceipt.id}</span>
                     </p>
                   </div>
                 </div>
@@ -770,19 +770,19 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs font-mono">
                 <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  <span className="text-[10px] text-slate-500 block">บัญชีผู้โอน (Debit -)</span>
+                  <span className="text-[10px] text-slate-500 block">Source Account (Debit -)</span>
                   <span className="text-slate-900 dark:text-white font-bold">{liveReceipt.sourceAccount.accountName}</span>
                   <span className="text-rose-500 dark:text-rose-400 block mt-1 font-bold">-฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  <span className="text-[10px] text-slate-500 block">บัญชีผู้รับ (Credit +)</span>
+                  <span className="text-[10px] text-slate-500 block">Destination Account (Credit +)</span>
                   <span className="text-slate-900 dark:text-white font-bold">{liveReceipt.destinationAccount.accountName}</span>
                   <span className="text-emerald-600 dark:text-emerald-400 block mt-1 font-bold">+฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  <span className="text-[10px] text-slate-500 block">ผลการตรวจความเสี่ยง (Risk)</span>
+                  <span className="text-[10px] text-slate-500 block">Autonomous Risk Result</span>
                   <span className={`font-bold block ${liveReceipt.riskScore >= 0.65 ? "text-rose-500 dark:text-rose-400" : liveReceipt.riskScore >= 0.35 ? "text-amber-500 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                     {(liveReceipt.riskScore * 100).toFixed(0)}% Risk Score
                   </span>
@@ -792,7 +792,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  <span className="text-[10px] text-slate-500 block">ลายเซ็นบล็อกเชน (Audit Hash)</span>
+                  <span className="text-[10px] text-slate-500 block">Blockchain Audit Hash</span>
                   <span className="text-[10px] text-cyan-700 dark:text-cyan-300 truncate block font-mono" title={liveReceipt.auditHash}>
                     {liveReceipt.auditHash ? `${liveReceipt.auditHash.substring(0, 16)}...` : "SHA-256 Verified"}
                   </span>
@@ -815,10 +815,10 @@ export default function DashboardPage() {
             </div>
             <div>
               <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-                เกณฑ์การคำนวณคณิตศาสตร์ & AI ตรวจจับธุรกรรมผิดปกติ (Mathematical Anomaly Rules)
+                Mathematical Anomaly Detection & Regulatory Rules Matrix
               </h2>
               <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                สูตรคำนวณแบบจำลองความเสี่ยงเชิงสถิติ (Gaussian Z-Score), ดัชนีความเร่ง และเงื่อนไขข้อบังคับ ธปท./ปปง.
+                Statistical Gaussian Z-Score modeling, velocity burst heuristics, and statutory BOT / AMLO thresholds
               </p>
             </div>
           </div>
@@ -832,22 +832,22 @@ export default function DashboardPage() {
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-emerald-200 dark:border-emerald-900/40 space-y-2">
             <div className="flex items-center justify-between">
               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
-                1. การโอนเงินปกติ
+                1. Standard Transfer
               </span>
               <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
                 Risk &le; 35%
               </span>
             </div>
             <div className="font-bold text-xs text-slate-900 dark:text-white">
-              ยอดเงินต่ำกว่าเกณฑ์ควบคุม
+              Under Control Threshold
             </div>
             <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-              <li>&bull; ยอดโอน &lt; ฿500,000</li>
-              <li>&bull; บัญชีต้นทาง/ปลายทางปกติ (Active)</li>
-              <li>&bull; ความถี่การโอนปกติ (&le; 2 ครั้ง/5นาที)</li>
+              <li>&bull; Amount &lt; ฿500,000</li>
+              <li>&bull; Verified source/dest status (Active)</li>
+              <li>&bull; Normal velocity (&le; 2 txns / 5 min)</li>
             </ul>
             <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-              ✓ อนุมัติและตัดยอดทันที (ACID Settle)
+              ✓ Instant ACID Settlement
             </div>
           </div>
 
@@ -855,22 +855,22 @@ export default function DashboardPage() {
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-amber-200 dark:border-amber-900/40 space-y-2">
             <div className="flex items-center justify-between">
               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
-                2. เกณฑ์ ธปท. ยอดสูง
+                2. BOT Elevated Directive
               </span>
               <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
                 +35% Risk
               </span>
             </div>
             <div className="font-bold text-xs text-slate-900 dark:text-white">
-              ยอดเงินตั้งแต่ ฿500,000 ขึ้นไป
+              High-Value &ge; ฿500,000
             </div>
             <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-              <li>&bull; ยอดโอน &ge; ฿500,000 (ธปท.)</li>
-              <li>&bull; ขนาดกลาง ฿200K - ฿499K (+15%)</li>
-              <li>&bull; เคลียริ่งข้ามธนาคาร/เบิกจ่ายองค์กร</li>
+              <li>&bull; Transfer &ge; ฿500,000 (BOT Directive)</li>
+              <li>&bull; Mid-Tier ฿200K - ฿499K (+15%)</li>
+              <li>&bull; Interbank Clearing / Corporate Payout</li>
             </ul>
             <div className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-              ⚡ แจ้งเตือนเฝ้าระวัง (Elevated Alert)
+              ⚡ Elevated Monitoring Alert
             </div>
           </div>
 
@@ -878,22 +878,22 @@ export default function DashboardPage() {
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-rose-200 dark:border-rose-900/40 space-y-2">
             <div className="flex items-center justify-between">
               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60">
-                3. เกณฑ์ ปปง. (STR)
+                3. AMLO Mandatory STR
               </span>
               <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400 font-bold">
                 +65% High Risk
               </span>
             </div>
             <div className="font-bold text-xs text-slate-900 dark:text-white">
-              ยอดเงินตั้งแต่ ฿2,000,000 ขึ้นไป
+              Threshold &ge; ฿2,000,000
             </div>
             <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-              <li>&bull; ยอดโอน &ge; ฿2,000,000 (ปปง.)</li>
-              <li>&bull; ซอยย่อยสะสม 24 ชม. &ge; ฿2M</li>
-              <li>&bull; รายการข้ามแดน (FATF Rec. 16)</li>
+              <li>&bull; Transfer &ge; ฿2,000,000 (AMLO Mandate)</li>
+              <li>&bull; 24h Cumulative Smurfing &ge; ฿2M</li>
+              <li>&bull; Cross-Border Wire (FATF Rec. 16)</li>
             </ul>
             <div className="text-[10px] text-rose-700 dark:text-rose-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-              🚨 ส่งรายงาน ปปง. อัตโนมัติ (STR)
+              🚨 Mandatory STR Filing Triggered
             </div>
           </div>
 
@@ -901,22 +901,22 @@ export default function DashboardPage() {
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-purple-200 dark:border-purple-900/40 space-y-2">
             <div className="flex items-center justify-between">
               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60">
-                4. สถิติคณิตศาสตร์ & บอท
+                4. Statistical Gaussian & Velocity
               </span>
               <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold">
-                +25% ถึง +45%
+                +25% to +45%
               </span>
             </div>
             <div className="font-bold text-xs text-slate-900 dark:text-white">
-              Gaussian Z-Score & Velocity
+              Gaussian Z-Score & Velocity Bursts
             </div>
             <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
               <li>&bull; Z = (x - μ) / σ &ge; 2.5σ Outlier</li>
-              <li>&bull; Burst Anomaly &ge; 3 ครั้ง/5นาที</li>
-              <li>&bull; บัญชีคู่ค้าใน AML Watchlist</li>
+              <li>&bull; Burst Anomaly &ge; 3 txns / 5 min</li>
+              <li>&bull; Counterparty in AML Watchlist</li>
             </ul>
             <div className="text-[10px] text-purple-700 dark:text-purple-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-              🔍 ดักจับบอทและการโยกเงินผิดปกติ
+              🔍 Automated Sybil & Anomaly Guard
             </div>
           </div>
         </div>
