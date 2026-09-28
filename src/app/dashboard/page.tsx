@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   TrendingUp,
   ShieldAlert,
   AlertTriangle,
   Scale,
-  Search,
   RefreshCw,
   ArrowUpRight,
   ExternalLink,
@@ -17,32 +17,22 @@ import {
   Zap,
   Database,
   CheckCircle2,
-  Copy,
-  Check,
-  Code2,
   Wallet,
   ArrowRight,
   ShieldCheck,
   Bot,
-  Building2,
-  Sparkles,
-  Send,
   UserPlus,
-  Calculator,
-  Percent,
-  Printer,
-  Download,
-  Eye,
-  EyeOff,
+  BarChart3,
+  PieChart,
   Activity,
-  Shield,
   CreditCard,
+  FileText,
+  Clock,
+  Shield,
   Layers,
-  HelpCircle,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import { TransactionWithAccounts } from "@/lib/types";
-import { sanitizeText, inspectPiiPresence } from "@/lib/security/guardrails";
 
 interface DashboardStats {
   totalVolume: number;
@@ -54,54 +44,9 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
   const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
   const setCreateAccountOpen = useComplianceStore((s) => s.setCreateAccountOpen);
-
-  const [activeWorkspaceView, setActiveWorkspaceView] = useState<"ALL" | "TELLER" | "OPERATIONS" | "COMPLIANCE">("ALL");
-  const [selectedCustomerAccount, setSelectedCustomerAccount] = useState<string>("");
-  const [customerAccountSearch, setCustomerAccountSearch] = useState<string>("");
-  const [receiptModalTx, setReceiptModalTx] = useState<TransactionWithAccounts | null>(null);
-  const [copiedReceipt, setCopiedReceipt] = useState(false);
-  const [maskPii, setMaskPii] = useState(true);
-
-  const formatAccNo = (num: string) => {
-    if (!maskPii || !num || num.length <= 4) return num;
-    return num.slice(0, 3) + "-****-" + num.slice(-4);
-  };
-
-  const [accounts, setAccounts] = useState<
-    {
-      id: string;
-      accountNumber: string;
-      accountName: string;
-      balance: string;
-      currency: string;
-      status: string;
-    }[]
-  >([]);
-  const [inspectedTx, setInspectedTx] = useState<TransactionWithAccounts | null>(null);
-  const [copiedHash, setCopiedHash] = useState(false);
-
-  // Live Real-Time Transfer Studio States
-  const [liveSourceId, setLiveSourceId] = useState("");
-  const [liveDestId, setLiveDestId] = useState("");
-  const [liveAmount, setLiveAmount] = useState("50000");
-  const [liveType, setLiveType] = useState<"TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER">("TRANSFER");
-  const [liveNote, setLiveNote] = useState("Corporate vendor settlement ID 1-1004-99882-12-9");
-  const [isExecutingLive, setIsExecutingLive] = useState(false);
-  const [liveReceipt, setLiveReceipt] = useState<{
-    id: string;
-    amount: string;
-    sourceAccount: { accountNumber: string; accountName: string };
-    destinationAccount: { accountNumber: string; accountName: string };
-    status: string;
-    riskScore: number;
-    riskReason: string;
-    metadata: Record<string, unknown>;
-    auditHash: string;
-    createdAt: string;
-  } | null>(null);
+  const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
 
   const [stats, setStats] = useState<DashboardStats>({
     totalVolume: 0,
@@ -113,15 +58,14 @@ export default function DashboardPage() {
 
   const [transactions, setTransactions] = useState<TransactionWithAccounts[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [timeRange, setTimeRange] = useState<"24H" | "7D" | "30D">("24H");
+  const [activeChartTab, setActiveChartTab] = useState<"VOLUME" | "RISK">("VOLUME");
 
   const [dbStatus, setDbStatus] = useState<{
     connected: boolean;
     provider: string;
     isNeon?: boolean;
     latencyMs?: number;
-    message?: string;
   }>({
     connected: false,
     provider: "Checking Database...",
@@ -130,17 +74,15 @@ export default function DashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [statsRes, txRes, dbRes, accRes] = await Promise.all([
+      const [statsRes, txRes, dbRes] = await Promise.all([
         fetch("/api/stats"),
         fetch("/api/transactions?limit=50"),
         fetch("/api/database/status"),
-        fetch("/api/accounts"),
       ]);
 
       const statsData = await statsRes.json();
       const txData = await txRes.json();
       const dbData = await dbRes.json();
-      const accData = await accRes.json();
 
       if (statsData.success) {
         setStats(statsData.data);
@@ -148,25 +90,16 @@ export default function DashboardPage() {
       if (txData.success) {
         setTransactions(txData.data);
       }
-      if (accData.success) {
-        setAccounts(accData.data);
-        if (accData.data.length >= 2) {
-          setLiveSourceId((prev) => prev || accData.data[0].id);
-          setLiveDestId((prev) => prev || accData.data[1].id);
-          setSelectedCustomerAccount((prev) => prev || accData.data[0].id);
-        }
-      }
       if (dbData.success) {
         setDbStatus({
           connected: dbData.connected,
           provider: dbData.provider,
           isNeon: dbData.provider?.includes("Neon"),
           latencyMs: dbData.latencyMs,
-          message: dbData.message,
         });
       }
     } catch (err) {
-      console.error("Error loading dashboard data:", err);
+      console.error("Error loading dashboard metrics:", err);
     } finally {
       setLoading(false);
     }
@@ -175,11 +108,9 @@ export default function DashboardPage() {
   useEffect(() => {
     loadData();
 
-    // Listen for live transaction commits from QuickTransferModal
     const handleTxUpdate = () => loadData();
     window.addEventListener("finguard_tx_updated", handleTxUpdate);
 
-    // Auto-refresh interval when page is active/visible
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
         loadData();
@@ -192,287 +123,184 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
-      let matchesFilter = true;
-      if (statusFilter === "HIGH_VALUE") {
-        matchesFilter = parseFloat(tx.amount) >= 500000;
-      } else if (statusFilter !== "ALL") {
-        matchesFilter = tx.status === statusFilter;
-      }
+  // Risk Distribution Calculation for Charts
+  const riskBreakdown = useMemo(() => {
+    let low = 0;
+    let medium = 0;
+    let high = 0;
 
-      const matchesSearch =
-        searchTerm === "" ||
-        tx.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.sourceAccount.accountNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.destinationAccount.accountNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.sourceAccount.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tx.destinationAccount.accountName.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesFilter && matchesSearch;
+    transactions.forEach((tx) => {
+      if (tx.riskScore >= 0.65) high++;
+      else if (tx.riskScore >= 0.35) medium++;
+      else low++;
     });
-  }, [transactions, statusFilter, searchTerm]);
 
-  const handleInspectInCopilot = (tx: TransactionWithAccounts) => {
-    setSelectedTransaction(tx);
-    router.push("/compliance");
-  };
+    const total = Math.max(1, transactions.length);
+    return {
+      low: { count: low, percentage: ((low / total) * 100).toFixed(1) },
+      medium: { count: medium, percentage: ((medium / total) * 100).toFixed(1) },
+      high: { count: high, percentage: ((high / total) * 100).toFixed(1) },
+      total: transactions.length,
+    };
+  }, [transactions]);
 
-  const handleExportCSV = () => {
-    if (filteredTransactions.length === 0) return;
-    const headers = [
-      "Transaction ID",
-      "Timestamp",
-      "Source Account Name",
-      "Source Account Number",
-      "Destination Account Name",
-      "Destination Account Number",
-      "Amount (THB)",
-      "Type",
-      "Risk Score",
-      "Status",
-      "Audit Hash",
-    ];
+  // Volume Trend Chart Data Generator
+  const volumeChartPoints = useMemo(() => {
+    const hours = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"];
+    const baseVal = stats.totalVolume > 0 ? stats.totalVolume / 6 : 50000;
+    
+    return hours.map((hour, idx) => {
+      const multiplier = [0.4, 0.25, 0.75, 1.1, 0.95, 0.85, 1.0][idx];
+      const volume = Math.round(baseVal * multiplier);
+      const riskLevel = [10, 5, 25, 45, 60, 30, 20][idx];
+      return { hour, volume, riskLevel };
+    });
+  }, [stats.totalVolume]);
 
-    const rows = filteredTransactions.map((tx) => [
-      `"${tx.id}"`,
-      `"${new Date(tx.createdAt).toISOString()}"`,
-      `"${tx.sourceAccount.accountName.replace(/"/g, '""')}"`,
-      `"${tx.sourceAccount.accountNumber}"`,
-      `"${tx.destinationAccount.accountName.replace(/"/g, '""')}"`,
-      `"${tx.destinationAccount.accountNumber}"`,
-      tx.amount,
-      `"${tx.type}"`,
-      (tx.riskScore * 100).toFixed(0) + "%",
-      `"${tx.status}"`,
-      `"${tx.auditHash || ""}"`,
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `finguard-ledger-report-${new Date().toISOString().split("T")[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleCopyReceipt = (tx: TransactionWithAccounts | null) => {
-    if (!tx) return;
-    const text = `========================================
-FINANCIAL SETTLEMENT RECEIPT (OFFICIAL)
-========================================
-Receipt ID: ${tx.id}
-Date/Time:  ${new Date(tx.createdAt).toLocaleString()}
-Status:     ${tx.status} (Double-Entry ACID Settled)
-
-DEBIT (Sender):
-Account:    ${tx.sourceAccount.accountName}
-Number:     ${tx.sourceAccount.accountNumber}
-Amount:     -฿${Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-
-CREDIT (Receiver):
-Account:    ${tx.destinationAccount.accountName}
-Number:     ${tx.destinationAccount.accountNumber}
-Amount:     +฿${Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-
-Category:   ${tx.type}
-Risk Score: ${(tx.riskScore * 100).toFixed(0)}% (${tx.riskReason || "Verified"})
-Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
-========================================`;
-    navigator.clipboard.writeText(text);
-    setCopiedReceipt(true);
-    setTimeout(() => setCopiedReceipt(false), 2000);
-  };
-
-  // Calculations for Live Studio
-  const liveSourceAcc = accounts.find((a) => a.id === liveSourceId);
-  const liveDestAcc = accounts.find((a) => a.id === liveDestId);
-  const numLiveAmount = parseFloat(liveAmount) || 0;
-  const sourceCurrentBal = liveSourceAcc ? parseFloat(liveSourceAcc.balance) : 0;
-  const destCurrentBal = liveDestAcc ? parseFloat(liveDestAcc.balance) : 0;
-  const sourceAfterBal = sourceCurrentBal - numLiveAmount;
-  const destAfterBal = destCurrentBal + numLiveAmount;
-  const isLiveOverdraft = sourceAfterBal < 0;
-
-  const livePiiInspection = inspectPiiPresence(liveNote);
-  const liveMaskedPreview = sanitizeText(liveNote);
-
-  const applyLivePreset = (
-    amount: string,
-    type: "TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER",
-    note: string,
-    srcIdx = 0,
-    dstIdx = 1
-  ) => {
-    setLiveAmount(amount);
-    setLiveType(type);
-    setLiveNote(note);
-    if (accounts[srcIdx]) setLiveSourceId(accounts[srcIdx].id);
-    if (accounts[dstIdx]) setLiveDestId(accounts[dstIdx].id);
-    setLiveReceipt(null);
-  };
-
-  const handleExecuteLiveTransfer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!liveSourceId || !liveDestId || isLiveOverdraft || isExecutingLive) return;
-    setIsExecutingLive(true);
-    setLiveReceipt(null);
-    try {
-      const res = await fetch("/api/transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourceAccountId: liveSourceId,
-          destinationAccountId: liveDestId,
-          amount: parseFloat(liveAmount),
-          type: liveType,
-          metadata: {
-            note: liveNote,
-            channel: "DASHBOARD_LIVE_STUDIO",
-            initiatedAt: new Date().toISOString(),
-          },
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.transaction) {
-        setLiveReceipt({
-          id: data.transaction.id,
-          amount: data.transaction.amount,
-          sourceAccount: data.transaction.sourceAccount,
-          destinationAccount: data.transaction.destinationAccount,
-          status: data.transaction.status,
-          riskScore: data.riskAssessment?.riskScore ?? data.transaction.riskScore ?? 0,
-          riskReason: data.riskAssessment?.riskReason ?? data.transaction.riskReason ?? "Verified",
-          metadata: data.transaction.metadata || {},
-          auditHash: data.auditHash || data.entryHash || "",
-          createdAt: data.transaction.createdAt,
-        });
-        await loadData();
-      }
-    } catch (err) {
-      console.error("Live transfer error:", err);
-    } finally {
-      setIsExecutingLive(false);
-    }
-  };
-
-  const selectedCustAcc = accounts.find((a) => a.id === selectedCustomerAccount);
-  const filteredCustomerAccounts = useMemo(() => {
-    if (!customerAccountSearch) return accounts;
-    const term = customerAccountSearch.toLowerCase();
-    return accounts.filter(
-      (a) =>
-        a.accountName.toLowerCase().includes(term) ||
-        a.accountNumber.toLowerCase().includes(term)
-    );
-  }, [accounts, customerAccountSearch]);
-
-  const printCustomerReceipt = () => {
-    window.print();
-  };
+  const maxChartVolume = Math.max(...volumeChartPoints.map((p) => p.volume), 100000);
 
   return (
     <div className="space-y-6 pb-12" suppressHydrationWarning>
-      {/* Top Banner / Hero Header */}
+      {/* Top Banner / Executive Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800/80">
         <div>
           <div className="flex items-center space-x-2">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Autonomous Compliance & Operations Center
+              Executive Oversight & Risk Intelligence Hub
             </h1>
             <span className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-950/80 dark:text-cyan-300 dark:border-cyan-700/60 font-mono">
-              Teller & Officer Ready
+              Live ACID Engine
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 font-medium max-w-2xl">
-            Double-entry ACID settlement with real-time heuristic AMLO & Bank of Thailand risk scoring for tellers, operators, and compliance officers.
+            Real-time visual monitoring of liquidity volume, mathematical AML/CFT risk vectors, and regulatory compliance.
           </p>
         </div>
 
-        {/* Clean, perfectly aligned Action Toolbar */}
+        {/* Top Actions */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-          {/* PDPA PII Data Protection Toggle */}
-          <button
-            onClick={() => setMaskPii(!maskPii)}
-            className={`inline-flex items-center space-x-1.5 h-10 px-3 rounded-xl text-xs font-bold border transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap ${
-              maskPii
-                ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-100"
-                : "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700/60 hover:bg-amber-100"
-            }`}
-            title="Toggle PDPA PII Data Protection Masking"
-          >
-            {maskPii ? <EyeOff className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
-            <span>{maskPii ? "PDPA Masked" : "Unmasked"}</span>
-          </button>
-
           <button
             onClick={() => setCreateAccountOpen(true)}
             className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap"
-            title="Create a new account for live transaction simulation"
           >
             <UserPlus className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-            <span>Create Account</span>
+            <span>+ Create Account</span>
           </button>
 
           <button
             onClick={() => setQuickTransferOpen(true)}
             className="inline-flex items-center space-x-1.5 h-10 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25 transition cursor-pointer active:scale-95 whitespace-nowrap"
-            title="Open live double-entry ACID money transfer modal"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Transfer Funds</span>
+            <span>+ Transfer Funds</span>
           </button>
 
           <button
             onClick={loadData}
             disabled={loading}
-            className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none transition cursor-pointer whitespace-nowrap"
-            title="Sync latest ledger state from database"
+            className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm transition cursor-pointer whitespace-nowrap"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-600 dark:text-cyan-400" : ""}`} />
-            <span>Sync Ledger</span>
+            <span>Sync</span>
           </button>
         </div>
       </div>
 
-      {/* Operational Workspace Mode Switcher (Staff / Teller / Operations / Compliance) */}
-      <div className="p-2 rounded-2xl bg-slate-100/90 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center space-x-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 pl-2">
-          <Layers className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-          <span>Operational View:</span>
-        </div>
+      {/* Dedicated Workflow Portal Switcher / Quick Navigation Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Link 1: Frontline Teller Desk */}
+        <Link
+          href="/teller"
+          className="group p-4 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-transparent border border-cyan-200 dark:border-cyan-800/80 hover:border-cyan-400 dark:hover:border-cyan-500 transition duration-200 flex items-center justify-between shadow-sm"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                Frontline Teller Desk
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                Customer transfers & slips
+              </div>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-cyan-500 group-hover:translate-x-1 transition duration-200" />
+        </Link>
 
-        <div className="flex items-center flex-wrap gap-1">
-          {[
-            { id: "ALL", label: "All-in-One Command Center" },
-            { id: "TELLER", label: "Frontline Teller Desk" },
-            { id: "OPERATIONS", label: "Daily Operations & Reconciliation" },
-            { id: "COMPLIANCE", label: "Risk & Regulatory Rules" },
-          ].map((mode) => (
-            <button
-              key={mode.id}
-              onClick={() => setActiveWorkspaceView(mode.id as typeof activeWorkspaceView)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-                activeWorkspaceView === mode.id
-                  ? "bg-white text-cyan-900 shadow-sm border border-cyan-300 dark:bg-gradient-to-r dark:from-cyan-950 dark:to-slate-800 dark:text-cyan-300 dark:border-cyan-500/50"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60"
-              }`}
-            >
-              {mode.label}
-            </button>
-          ))}
-        </div>
+        {/* Link 2: Daily Operations & Reconciliation */}
+        <Link
+          href="/reconciliation"
+          className="group p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent border border-purple-200 dark:border-purple-800/80 hover:border-purple-400 dark:hover:border-purple-500 transition duration-200 flex items-center justify-between shadow-sm"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
+              <Scale className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                Ledger Reconciliation
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                Audit ledger & CSV export
+              </div>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-purple-500 group-hover:translate-x-1 transition duration-200" />
+        </Link>
+
+        {/* Link 3: AI Compliance Copilot */}
+        <Link
+          href="/compliance"
+          className="group p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 transition duration-200 flex items-center justify-between shadow-sm"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
+              <Bot className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                AI Compliance Copilot
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                RAG regulatory queries
+              </div>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition duration-200" />
+        </Link>
+
+        {/* Link 4: Immutable Audit Trail */}
+        <Link
+          href="/audit"
+          className="group p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-200 dark:border-amber-800/80 hover:border-amber-400 dark:hover:border-amber-500 transition duration-200 flex items-center justify-between shadow-sm"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                Audit Trail Explorer
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                SHA-256 blockchain proof
+              </div>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 group-hover:translate-x-1 transition duration-200" />
+        </Link>
       </div>
 
-      {/* Executive KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      {/* KPI Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1 */}
         <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-600" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Total Volume Processed
+              Settled Volume (24h)
             </span>
             <div className="p-2.5 rounded-xl bg-cyan-100 dark:bg-cyan-950/60 border border-cyan-300 dark:border-cyan-800/40 text-cyan-700 dark:text-cyan-400 group-hover:scale-110 transition duration-200">
               <TrendingUp className="w-4 h-4" />
@@ -483,8 +311,10 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
               ฿{stats.totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
             <div className="mt-2 flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 space-x-1.5">
-              <ArrowUpRight className="w-4 h-4" />
-              <span>{stats.transactionCount} settled transactions</span>
+              <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 font-mono text-[10px]">
+                {stats.transactionCount} Txns
+              </span>
+              <span>Settled in Real-Time</span>
             </div>
           </div>
         </div>
@@ -506,7 +336,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
             </div>
             <div className="mt-2 flex items-center text-xs font-semibold text-cyan-700 dark:text-cyan-400 space-x-1.5">
               <FileCheck2 className="w-4 h-4" />
-              <span>Double-Entry Invariant Verified</span>
+              <span>Double-Entry ACID Balanced</span>
             </div>
           </div>
         </div>
@@ -528,7 +358,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
             </div>
             <div className="mt-2 flex items-center text-xs font-semibold text-rose-600 dark:text-rose-400 space-x-1.5">
               <AlertTriangle className="w-4 h-4" />
-              <span>Requires Copilot Interrogation</span>
+              <span>AMLO Trigger &ge; ฿2M or Gaussian Burst</span>
             </div>
           </div>
         </div>
@@ -556,1234 +386,282 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
       </div>
 
       {/* ========================================================================= */}
-      {/* FRONTLINE TELLER DESK & QUICK CUSTOMER BALANCE VERIFIER WIDGET            */}
+      {/* INTERACTIVE ANALYTICS & CHARTS SECTION                                     */}
       {/* ========================================================================= */}
-      {(activeWorkspaceView === "ALL" || activeWorkspaceView === "TELLER") && (
-        <div className="glass-panel rounded-3xl border border-cyan-300 dark:border-cyan-800/80 p-5 sm:p-6 shadow-xl space-y-4 bg-cyan-50/20 dark:bg-slate-900/40">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Chart 1: Financial Settlement Volume & Velocity Trend (8 cols) */}
+        <div className="lg:col-span-8 glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 sm:p-6 shadow-xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-2xl bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700/60 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
-                <CreditCard className="w-5 h-5" />
+                <BarChart3 className="w-5 h-5" />
               </div>
               <div>
                 <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-                  Frontline Teller Desk & Instant Customer Balance Verifier
+                  Settlement Velocity & Volume Trajectory
                 </h2>
                 <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                  Instant counter balance lookup, account solvency verification, and 1-click counterparty pre-fill
+                  Hourly double-entry settlement distribution and volume flow
                 </p>
               </div>
             </div>
 
+            <div className="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+              {(["24H", "7D", "30D"] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setTimeRange(r)}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer text-xs ${
+                    timeRange === r
+                      ? "bg-white text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 shadow-sm border border-cyan-200 dark:border-cyan-800"
+                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Interactive Dynamic Bar & Area Chart */}
+          <div className="space-y-3">
+            <div className="h-56 w-full flex items-end justify-between gap-2 sm:gap-4 pt-8 pb-2 px-2 border-b border-slate-200 dark:border-slate-800 relative">
+              {/* Background Grid Lines */}
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+                <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
+                <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
+                <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
+              </div>
+
+              {volumeChartPoints.map((pt, idx) => {
+                const heightPercent = Math.max(12, Math.min(100, Math.round((pt.volume / maxChartVolume) * 100)));
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
+                    {/* Tooltip */}
+                    <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none z-20 bg-slate-900 text-white text-[10px] font-mono py-1 px-2 rounded-lg shadow-xl whitespace-nowrap">
+                      ฿{pt.volume.toLocaleString()} ({pt.hour})
+                    </div>
+
+                    {/* Bar Container */}
+                    <div
+                      style={{ height: `${heightPercent}%` }}
+                      className="w-full max-w-[48px] rounded-t-xl bg-gradient-to-t from-cyan-600 via-blue-600 to-indigo-500 group-hover:from-cyan-400 group-hover:to-blue-400 transition-all duration-200 relative overflow-hidden shadow-md shadow-cyan-600/10"
+                    >
+                      <div className="absolute inset-x-0 top-0 h-1 bg-white/40" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* X-Axis Labels */}
+            <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2">
+              {volumeChartPoints.map((pt, idx) => (
+                <span key={idx}>{pt.hour}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* Chart Footnote Highlights */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs">
             <div className="flex items-center space-x-2">
-              <span className="text-[11px] px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-mono font-bold">
-                ✓ Solvency Verified
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Avg Settlement:</span>
+              <span className="font-mono font-bold text-slate-900 dark:text-white">
+                ฿{stats.transactionCount > 0 ? (stats.totalVolume / stats.transactionCount).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "0"}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Throughput:</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                100% Invariant Checked
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Engine Mode:</span>
+              <span className="font-mono font-bold text-slate-900 dark:text-white">
+                Zero-Crash Isolation
               </span>
             </div>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-            {/* Account Search & Selector */}
-            <div className="lg:col-span-6 space-y-2">
-              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                <span>Select Customer Account:</span>
-                <span className="text-[10px] text-slate-500 font-normal">
-                  {accounts.length} active customer accounts loaded
-                </span>
-              </label>
-
-              <select
-                value={selectedCustomerAccount}
-                onChange={(e) => setSelectedCustomerAccount(e.target.value)}
-                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-bold"
-              >
-                {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()} [{acc.status}]
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Quick Balance & Action Card */}
-            {selectedCustAcc && (
-              <div className="lg:col-span-6 p-3.5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-xs text-slate-900 dark:text-white">
-                      {selectedCustAcc.accountName}
-                    </span>
-                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
-                      {selectedCustAcc.status}
-                    </span>
-                  </div>
-                  <div className="font-mono text-sm font-extrabold text-cyan-700 dark:text-cyan-400 mt-1">
-                    ฿{Number(selectedCustAcc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {selectedCustAcc.currency}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLiveSourceId(selectedCustAcc.id);
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-800 dark:text-rose-300 text-[11px] font-bold border border-rose-300 dark:border-rose-700/60 transition cursor-pointer"
-                    title="Set as Sender in Live Transfer Studio"
-                  >
-                    Set as Sender (Debit)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLiveDestId(selectedCustAcc.id);
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold border border-emerald-300 dark:border-emerald-700/60 transition cursor-pointer"
-                    title="Set as Receiver in Live Transfer Studio"
-                  >
-                    Set as Receiver (Credit)
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
-      )}
 
-      {/* BFSI Liquidity & Settlement Accounts Overview */}
-      {(activeWorkspaceView === "ALL" || activeWorkspaceView === "OPERATIONS" || activeWorkspaceView === "TELLER") && accounts.length > 0 && (
-        <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 shadow-xl dark:shadow-2xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Chart 2: Mathematical Risk & AML Severity Donut / Tier Distribution (4 cols) */}
+        <div className="lg:col-span-4 glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 sm:p-6 shadow-xl space-y-5 flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700/60 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
-                <Wallet className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800/60 flex items-center justify-center text-rose-700 dark:text-rose-400">
+                <PieChart className="w-4.5 h-4.5" />
               </div>
-              <div>
-                <h2 className="font-extrabold text-sm text-slate-900 dark:text-white tracking-tight">
-                  BFSI Treasury & Settlement Accounts Liquidity
-                </h2>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                  Real-time Double-Entry Ledger account standings & solvency status
-                </p>
-              </div>
+              <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
+                Risk Severity Breakdown
+              </h2>
             </div>
-
-            <button
-              onClick={() => setCreateAccountOpen(true)}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-950/60 dark:hover:bg-cyan-900/80 text-cyan-800 dark:text-cyan-300 text-xs font-bold border border-cyan-300 dark:border-cyan-700/70 transition cursor-pointer self-start sm:self-auto"
-            >
-              <UserPlus className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-              <span>+ Create Account</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {accounts.map((acc) => {
-              const isFlagged = acc.status !== "ACTIVE";
-              return (
-                <div
-                  key={acc.id}
-                  className={`p-3.5 rounded-2xl border transition duration-200 ${
-                    isFlagged
-                      ? "bg-rose-50 border-rose-300 dark:bg-rose-950/20 dark:border-rose-800/50 hover:border-rose-500"
-                      : "bg-slate-50 border-slate-200 dark:bg-slate-900/60 dark:border-slate-800/80 hover:border-cyan-500/40"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span
-                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold uppercase ${
-                        isFlagged
-                          ? "bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-700/60"
-                          : "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700/60"
-                      }`}
-                    >
-                      {acc.status}
-                    </span>
-                    <span className="font-mono text-[10px] text-slate-500">
-                      {acc.currency}
-                    </span>
-                  </div>
-                  <div className="font-bold text-slate-900 dark:text-white text-xs truncate" title={acc.accountName}>
-                    {acc.accountName}
-                  </div>
-                  <div className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate mt-0.5">
-                    {formatAccNo(acc.accountNumber)}
-                  </div>
-                  <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-baseline justify-between">
-                    <span className="text-[10px] text-slate-500">Balance:</span>
-                    <span className="font-mono font-bold text-slate-900 dark:text-white text-xs">
-                      ฿{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* LIVE INTERACTIVE TRANSFER STUDIO (Real-Time Double-Entry & Compliance)    */}
-      {/* ========================================================================= */}
-      {(activeWorkspaceView === "ALL" || activeWorkspaceView === "TELLER") && accounts.length >= 2 && (
-        <div className="glass-panel rounded-3xl border border-slate-200 dark:border-cyan-800/80 p-6 shadow-xl dark:shadow-2xl relative overflow-hidden bg-white dark:bg-gradient-to-b dark:from-[#061022] dark:to-[#040914]">
-          {/* Subtle Accent Glow */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
-
-          {/* Studio Header */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-5 border-b border-slate-200 dark:border-slate-800/80 gap-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
-                <Send className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-                    Live Money Transfer & Compliance Studio
-                  </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-mono">
-                    Neon DB Connected
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-                  Execute live ACID double-entry transfers with instantaneous BOT / AMLO / PDPA compliance scoring
-                </p>
-              </div>
-            </div>
-
-            {/* Scenario Quick Buttons */}
-            <div className="flex items-center flex-wrap gap-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-0.5">Presets:</span>
-              <button
-                type="button"
-                onClick={() =>
-                  applyLivePreset(
-                    "45000",
-                    "TRANSFER",
-                    "Corporate vendor settlement ID 1-1004-99882-12-9",
-                    0,
-                    1
-                  )
-                }
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>฿45K Standard</span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  applyLivePreset(
-                    "650000",
-                    "DISBURSEMENT",
-                    "Project capital disbursement ID 1-1004-99882-12-9",
-                    0,
-                    1
-                  )
-                }
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>฿650K BOT Alert</span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  applyLivePreset(
-                    "2500000",
-                    "CROSS_BORDER",
-                    "Cross-border wire transfer AMLO declaration ID 1-1004-99882-12-9",
-                    0,
-                    1
-                  )
-                }
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-rose-500" />
-                <span>฿2.5M AMLO (STR)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  applyLivePreset(
-                    "350000",
-                    "CROSS_BORDER",
-                    "High-risk beneficiary transfer ID 1-1004-99882-12-9",
-                    0,
-                    4
-                  )
-                }
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-purple-500" />
-                <span>Watchlist Entity</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Frontline Teller Live Guidance Advice Box */}
-          <div className="mt-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-            <div className="flex items-center space-x-2">
-              <HelpCircle className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-              <div>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Teller Guidance Advice: </span>
-                <span className="font-medium text-slate-600 dark:text-slate-400">
-                  {numLiveAmount >= 2000000
-                    ? "Mandatory AMLO STR notification triggered. Supervisor signature required on customer slip."
-                    : numLiveAmount >= 500000
-                    ? "Bank of Thailand high-value alert (> ฿500,000). Verify customer KYC document."
-                    : numLiveAmount >= 200000
-                    ? "Mid-tier transaction (>= ฿200,000). Standard frontline clearance authorized."
-                    : "Standard retail transfer. Instant frontline execution authorized."}
-                </span>
-              </div>
-            </div>
-            <span
-              className={`text-[10px] font-mono px-2.5 py-1 rounded-xl border shrink-0 font-bold ${
-                numLiveAmount >= 2000000
-                  ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-700/60"
-                  : numLiveAmount >= 500000
-                  ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700/60"
-                  : "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700/60"
-              }`}
-            >
-              {numLiveAmount >= 2000000
-                ? "AMLO STR Mandate"
-                : numLiveAmount >= 500000
-                ? "Supervisor Approval"
-                : "Frontline Authorized"}
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
+              {riskBreakdown.total} evaluated
             </span>
           </div>
 
-          {/* Form Grid */}
-          <form onSubmit={handleExecuteLiveTransfer} className="mt-5 space-y-5">
-            {/* Visual Account Selector Bridge */}
-            <div className="grid grid-cols-1 lg:grid-cols-11 gap-3 items-center">
-              {/* Source Account Card */}
-              <div className="lg:col-span-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <label className="font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center space-x-1.5">
-                    <Wallet className="w-3.5 h-3.5" />
-                    <span>Source Account (Debit -)</span>
-                  </label>
-                  <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                    Current: ฿{sourceCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <select
-                  value={liveSourceId}
-                  onChange={(e) => setLiveSourceId(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-semibold"
-                >
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.accountName} ({acc.accountNumber}) - ฿{Number(acc.balance).toLocaleString()}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
-                  <span className="text-slate-500">Projected Balance:</span>
-                  <span className={`font-bold ${sourceAfterBal < 0 ? "text-rose-600 dark:text-rose-400" : "text-cyan-700 dark:text-cyan-300"}`}>
-                    ฿{sourceAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-
-              {/* Transfer Arrow Bridge */}
-              <div className="lg:col-span-1 flex flex-col items-center justify-center py-2">
-                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-cyan-500/40 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-sm dark:shadow-md">
-                  <ArrowRight className="w-5 h-5 rotate-90 lg:rotate-0" />
-                </div>
-                <span className="text-[9px] font-mono text-cyan-700 dark:text-cyan-400/80 mt-1 uppercase font-bold text-center">
-                  Double-Entry
+          {/* Graphical Multi-Tier Progress Bars */}
+          <div className="space-y-4">
+            {/* Low Risk Tier */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Normal Compliant (&lt;35%)</span>
+                </span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  {riskBreakdown.low.count} ({riskBreakdown.low.percentage}%)
                 </span>
               </div>
-
-              {/* Destination Account Card */}
-              <div className="lg:col-span-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <label className="font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
-                    <Building2 className="w-3.5 h-3.5" />
-                    <span>Destination Account (Credit +)</span>
-                  </label>
-                  <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                    Current: ฿{destCurrentBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <select
-                  value={liveDestId}
-                  onChange={(e) => setLiveDestId(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-semibold"
-                >
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.accountName} ({acc.accountNumber}) - ฿{Number(acc.balance).toLocaleString()}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex items-center justify-between pt-1 text-[11px] font-mono">
-                  <span className="text-slate-500">Projected Balance:</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    ฿{destAfterBal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Amount, Type, and PDPA Redaction */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-              {/* Amount */}
-              <div className="md:col-span-4 space-y-1.5">
-                <label className="text-xs font-bold text-slate-800 dark:text-white flex items-center justify-between">
-                  <span>Transfer Amount (THB)</span>
-                  {numLiveAmount >= 2000000 ? (
-                    <span className="text-rose-600 dark:text-rose-400 font-mono text-[10px] font-bold">AMLO &ge; ฿2M STR</span>
-                  ) : numLiveAmount >= 500000 ? (
-                    <span className="text-amber-600 dark:text-amber-400 font-mono text-[10px] font-bold">BOT &gt; ฿500K Alert</span>
-                  ) : (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-bold">Standard</span>
-                  )}
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-600 dark:text-cyan-400 font-bold font-mono text-sm">฿</span>
-                  <input
-                    type="number"
-                    value={liveAmount}
-                    onChange={(e) => setLiveAmount(e.target.value)}
-                    min="1"
-                    step="any"
-                    required
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/90 rounded-xl pl-8 pr-3.5 py-2.5 text-sm text-slate-900 dark:text-white font-mono font-extrabold focus:outline-none focus:border-cyan-400 transition"
-                  />
-                </div>
-              </div>
-
-              {/* Transfer Type */}
-              <div className="md:col-span-3 space-y-1.5">
-                <label className="text-xs font-bold text-slate-800 dark:text-white">Transaction Category</label>
-                <select
-                  value={liveType}
-                  onChange={(e) => setLiveType(e.target.value as "TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER")}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/90 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-semibold"
-                >
-                  <option value="TRANSFER">Domestic Fund Transfer</option>
-                  <option value="SETTLEMENT">Inter-Bank Clearing Settlement</option>
-                  <option value="DISBURSEMENT">Corporate Treasury Disbursement</option>
-                  <option value="CROSS_BORDER">Cross-Border Wire Transfer</option>
-                </select>
-              </div>
-
-              {/* Note with Real-Time PDPA Inspection */}
-              <div className="md:col-span-5 space-y-1.5">
-                <label className="text-xs font-bold text-slate-800 dark:text-white flex items-center justify-between">
-                  <span>Memo / National ID / PII (PDPA Live Masking)</span>
-                  {livePiiInspection.hasPii && (
-                    <span className="text-[10px] text-cyan-700 dark:text-cyan-400 font-mono font-bold flex items-center space-x-1">
-                      <Lock className="w-3 h-3" />
-                      <span>PII Detected</span>
-                    </span>
-                  )}
-                </label>
-                <input
-                  type="text"
-                  value={liveNote}
-                  onChange={(e) => setLiveNote(e.target.value)}
-                  placeholder="Enter 13-digit Thai National ID, card numbers, or transaction memo..."
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/90 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 transition"
+              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                <div
+                  style={{ width: `${riskBreakdown.low.percentage}%` }}
+                  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
                 />
               </div>
             </div>
 
-            {/* PDPA Real-Time Live Preview Highlight Box */}
-            <div className="p-3 rounded-2xl bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-800/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <div className="flex items-center space-x-2">
-                <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-                <div>
-                  <span className="font-bold text-cyan-900 dark:text-cyan-300">PDPA Guardrail Live Redaction: </span>
-                  <span className="font-mono text-cyan-950 dark:text-cyan-100">{liveMaskedPreview}</span>
-                </div>
-              </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-100 dark:bg-cyan-900/60 text-cyan-850 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-700/50 shrink-0 font-bold">
-                Auto-Masked Pre-Persistence
-              </span>
-            </div>
-
-            {/* Action Button & Invariant Confirmation */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-              <div className="flex items-center space-x-2 text-xs font-mono">
-                <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-slate-600 dark:text-slate-400">Double-Entry Guarantee: </span>
-                <span className={`font-bold ${isLiveOverdraft ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                  {isLiveOverdraft ? "Insufficient Funds (Overdraft Rejected)" : "Debit = Credit (Net Zero Delta)"}
+            {/* Medium Risk Tier */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span>Elevated Scrutiny (35-64%)</span>
+                </span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white">
+                  {riskBreakdown.medium.count} ({riskBreakdown.medium.percentage}%)
                 </span>
               </div>
-
-              <button
-                type="submit"
-                disabled={isExecutingLive || isLiveOverdraft}
-                className={`px-7 py-3 rounded-2xl text-xs font-extrabold text-white transition flex items-center justify-center space-x-2.5 cursor-pointer shadow-xl ${
-                  isLiveOverdraft
-                    ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed"
-                    : "bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 shadow-cyan-600/30 active:scale-95"
-                }`}
-              >
-                {isExecutingLive ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Settling ACID Ledger on Neon DB...</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 text-cyan-300" />
-                    <span>Execute Live ACID Transfer</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* ========================================================================= */}
-          {/* OFFICIAL TRANSACTION RECEIPT SLIP (Official Settlement Receipt)           */}
-          {/* ========================================================================= */}
-          {liveReceipt && (
-            <div className="mt-6 p-5 rounded-2xl bg-emerald-50/90 dark:bg-[#030712] border-2 border-emerald-400 dark:border-emerald-500/60 shadow-xl dark:shadow-2xl animate-in fade-in duration-300 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-emerald-200 dark:border-slate-800 gap-2">
-                <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-600 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                      Official Transaction Settlement Receipt
-                    </h3>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                      Settled on Neon Serverless PostgreSQL &bull; Reference: <span className="font-mono text-cyan-700 dark:text-cyan-300 font-bold">{liveReceipt.id}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const fullTx: TransactionWithAccounts = {
-                        id: liveReceipt.id,
-                        amount: liveReceipt.amount,
-                        currency: "THB",
-                        type: liveType,
-                        status: liveReceipt.status as "APPROVED" | "FLAGGED" | "REJECTED",
-                        riskScore: liveReceipt.riskScore,
-                        riskReason: liveReceipt.riskReason,
-                        metadata: liveReceipt.metadata,
-                        auditHash: liveReceipt.auditHash,
-                        sourceAccountId: liveSourceId,
-                        destinationAccountId: liveDestId,
-                        sourceAccount: liveReceipt.sourceAccount as any,
-                        destinationAccount: liveReceipt.destinationAccount as any,
-                        createdAt: new Date(liveReceipt.createdAt).toISOString(),
-                      };
-                      setReceiptModalTx(fullTx);
-                    }}
-                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                    <span>Print Customer Slip</span>
-                  </button>
-
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600">
-                    {liveReceipt.status}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs font-mono">
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  <span className="text-[10px] text-slate-500 block">Source Account (Debit -)</span>
-                  <span className="text-slate-900 dark:text-white font-bold">{liveReceipt.sourceAccount.accountName}</span>
-                  <span className="text-rose-500 dark:text-rose-400 block mt-1 font-bold">-฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  <span className="text-[10px] text-slate-500 block">Destination Account (Credit +)</span>
-                  <span className="text-slate-900 dark:text-white font-bold">{liveReceipt.destinationAccount.accountName}</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 block mt-1 font-bold">+฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  <span className="text-[10px] text-slate-500 block">Autonomous Risk Result</span>
-                  <span className={`font-bold block ${liveReceipt.riskScore >= 0.65 ? "text-rose-500 dark:text-rose-400" : liveReceipt.riskScore >= 0.35 ? "text-amber-500 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                    {(liveReceipt.riskScore * 100).toFixed(0)}% Risk Score
-                  </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block mt-0.5" title={liveReceipt.riskReason}>
-                    {liveReceipt.riskReason}
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-emerald-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  <span className="text-[10px] text-slate-500 block">Blockchain Audit Hash</span>
-                  <span className="text-[10px] text-cyan-700 dark:text-cyan-300 truncate block font-mono" title={liveReceipt.auditHash}>
-                    {liveReceipt.auditHash ? `${liveReceipt.auditHash.substring(0, 16)}...` : "SHA-256 Verified"}
-                  </span>
-                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block mt-1">✓ Non-Repudiation</span>
-                </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                <div
+                  style={{ width: `${riskBreakdown.medium.percentage}%` }}
+                  className="bg-amber-400 h-full rounded-full transition-all duration-300"
+                />
               </div>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* ========================================================================= */}
-      {/* MATHEMATICAL ANOMALY DETECTION ENGINE & RULE CONDITIONS MATRIX           */}
-      {/* ========================================================================= */}
-      {(activeWorkspaceView === "ALL" || activeWorkspaceView === "COMPLIANCE") && (
-        <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 sm:p-6 shadow-xl dark:shadow-2xl space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-                <Calculator className="w-5 h-5" />
+            {/* High Risk Tier */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-rose-700 dark:text-rose-400 flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span>AMLO High-Risk (&ge;65%)</span>
+                </span>
+                <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                  {riskBreakdown.high.count} ({riskBreakdown.high.percentage}%)
+                </span>
               </div>
-              <div>
-                <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-                  Mathematical Anomaly Detection & Regulatory Rules Matrix
-                </h2>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                  Statistical Gaussian Z-Score modeling, velocity burst heuristics, and statutory BOT / AMLO thresholds
-                </p>
+              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                <div
+                  style={{ width: `${riskBreakdown.high.percentage}%` }}
+                  className="bg-rose-500 h-full rounded-full transition-all duration-300"
+                />
               </div>
-            </div>
-            <div className="font-mono text-[11px] px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-cyan-700 dark:text-cyan-300 font-bold self-start sm:self-auto">
-              R = min(1.0, w₀ + w_amt + w_vel + w_zscore + w_smurf + w_entity)
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            {/* Card 1: Normal Transfer */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-emerald-200 dark:border-emerald-900/40 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
-                  1. Standard Transfer
-                </span>
-                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                  Risk &le; 35%
-                </span>
-              </div>
-              <div className="font-bold text-xs text-slate-900 dark:text-white">
-                Under Control Threshold
-              </div>
-              <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-                <li>&bull; Amount &lt; ฿500,000</li>
-                <li>&bull; Verified source/dest status (Active)</li>
-                <li>&bull; Normal velocity (&le; 2 txns / 5 min)</li>
-              </ul>
-              <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-                ✓ Instant ACID Settlement
-              </div>
+          {/* Mathematical Anomaly Radar Card */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
+              <span>Statistical Heuristics Active:</span>
+              <span className="text-cyan-600 dark:text-cyan-400 font-mono">4 Engines</span>
             </div>
-
-            {/* Card 2: BOT Threshold */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-amber-200 dark:border-amber-900/40 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
-                  2. BOT Elevated Directive
-                </span>
-                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
-                  +35% Risk
-                </span>
-              </div>
-              <div className="font-bold text-xs text-slate-900 dark:text-white">
-                High-Value &ge; ฿500,000
-              </div>
-              <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-                <li>&bull; Transfer &ge; ฿500,000 (BOT Directive)</li>
-                <li>&bull; Mid-Tier ฿200K - ฿499K (+15%)</li>
-                <li>&bull; Interbank Clearing / Corporate Payout</li>
-              </ul>
-              <div className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-                ⚡ Elevated Monitoring Alert
-              </div>
-            </div>
-
-            {/* Card 3: AMLO Mandatory */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-rose-200 dark:border-rose-900/40 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60">
-                  3. AMLO Mandatory STR
-                </span>
-                <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400 font-bold">
-                  +65% High Risk
-                </span>
-              </div>
-              <div className="font-bold text-xs text-slate-900 dark:text-white">
-                Threshold &ge; ฿2,000,000
-              </div>
-              <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-                <li>&bull; Transfer &ge; ฿2,000,000 (AMLO Mandate)</li>
-                <li>&bull; 24h Cumulative Smurfing &ge; ฿2M</li>
-                <li>&bull; Cross-Border Wire (FATF Rec. 16)</li>
-              </ul>
-              <div className="text-[10px] text-rose-700 dark:text-rose-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-                [ALERT] Mandatory STR Filing Triggered
-              </div>
-            </div>
-
-            {/* Card 4: Gaussian & Velocity Anomaly */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-purple-200 dark:border-purple-900/40 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60">
-                  4. Statistical Gaussian & Velocity
-                </span>
-                <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold">
-                  +25% to +45%
-                </span>
-              </div>
-              <div className="font-bold text-xs text-slate-900 dark:text-white">
-                Gaussian Z-Score & Velocity Bursts
-              </div>
-              <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-                <li>&bull; Z = (x - μ) / σ &ge; 2.5σ Outlier</li>
-                <li>&bull; Burst Anomaly &ge; 3 txns / 5 min</li>
-                <li>&bull; Counterparty in AML Watchlist</li>
-              </ul>
-              <div className="text-[10px] text-purple-700 dark:text-purple-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-                [VERIFIED] Automated Sybil & Anomaly Guard
-              </div>
-            </div>
+            <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1 font-mono">
+              <li>&bull; Gaussian Z-Score Outlier (2.5&sigma;)</li>
+              <li>&bull; 24h Velocity &amp; Smurfing Ratio</li>
+              <li>&bull; AMLO ฿2,000,000 Threshold Limit</li>
+              <li>&bull; FATF Rec. 16 Cross-Border Scrutiny</li>
+            </ul>
           </div>
-        </div>
-      )}
-
-      {/* Transaction Ledger Table Section */}
-      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 overflow-hidden shadow-xl dark:shadow-2xl">
-        {/* Table Header Controls */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/40">
-          <div className="flex items-center space-x-3">
-            <h2 className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">
-              Real-Time Transaction Ledger & Audit Feed
-            </h2>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-medium border border-slate-300 dark:border-slate-700/60">
-              {filteredTransactions.length} records
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5" suppressHydrationWarning>
-            {/* Search Input */}
-            <div className="relative" suppressHydrationWarning>
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search account, amount, txn..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                autoComplete="off"
-                data-protonpass-ignore="true"
-                data-lpignore="true"
-                data-1p-ignore="true"
-                suppressHydrationWarning
-                className="bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-48 sm:w-56 transition font-medium"
-              />
-            </div>
-
-            {/* Status Filter Buttons */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex-wrap">
-              {[
-                { id: "ALL", label: "ALL" },
-                { id: "APPROVED", label: "APPROVED" },
-                { id: "FLAGGED", label: "FLAGGED" },
-                { id: "REJECTED", label: "REJECTED" },
-                { id: "HIGH_VALUE", label: "≥ ฿500K" },
-              ].map((st) => (
-                <button
-                  key={st.id}
-                  onClick={() => setStatusFilter(st.id)}
-                  className={`px-2.5 py-1.5 rounded-lg transition text-xs font-bold cursor-pointer whitespace-nowrap ${
-                    statusFilter === st.id
-                      ? "bg-white text-cyan-800 border border-cyan-300 shadow-sm dark:bg-gradient-to-r dark:from-cyan-900 dark:to-slate-800 dark:text-cyan-300 dark:border-cyan-500/40"
-                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                  }`}
-                >
-                  {st.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Export CSV for Operations & Reporting */}
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700/80 transition cursor-pointer shadow-sm"
-              title="Download ledger records as CSV for spreadsheets and accounting"
-            >
-              <Download className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-              <span>Export CSV</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Ledger Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-            <thead className="bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800/80 uppercase tracking-wider text-[11px] text-slate-600 dark:text-slate-400 font-bold">
-              <tr>
-                <th className="px-5 py-3.5">Timestamp</th>
-                <th className="px-5 py-3.5">Source (Debit)</th>
-                <th className="px-5 py-3.5">Destination (Credit)</th>
-                <th className="px-5 py-3.5">Amount (THB)</th>
-                <th className="px-5 py-3.5">Risk Score</th>
-                <th className="px-5 py-3.5 text-center">Status</th>
-                <th className="px-5 py-3.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
-              {filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-16 text-slate-500 font-medium">
-                    No transactions found matching filter criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredTransactions.map((tx) => (
-                  <tr
-                    key={tx.id}
-                    onClick={() => setInspectedTx(tx)}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition duration-150 group cursor-pointer"
-                  >
-                    {/* Timestamp */}
-                    <td className="px-5 py-4 font-mono text-xs text-slate-500 dark:text-slate-400" suppressHydrationWarning>
-                      {new Date(tx.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      })}
-                      <span className="block text-[10px] text-slate-400 dark:text-slate-500" suppressHydrationWarning>
-                        {new Date(tx.createdAt).toLocaleDateString()}
-                      </span>
-                    </td>
-
-                    {/* Source Account */}
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-slate-900 dark:text-white text-xs">
-                        {tx.sourceAccount.accountName}
-                      </div>
-                      <div className="font-mono text-[11px] text-cyan-700 dark:text-cyan-400">
-                        {formatAccNo(tx.sourceAccount.accountNumber)}
-                      </div>
-                    </td>
-
-                    {/* Destination Account */}
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-slate-900 dark:text-white text-xs">
-                        {tx.destinationAccount.accountName}
-                      </div>
-                      <div className="font-mono text-[11px] text-blue-700 dark:text-blue-400">
-                        {formatAccNo(tx.destinationAccount.accountNumber)}
-                      </div>
-                    </td>
-
-                    {/* Amount */}
-                    <td className="px-5 py-4 font-mono font-bold text-slate-900 dark:text-white text-sm">
-                      ฿{Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      <span className="text-[10px] font-sans font-normal text-slate-600 dark:text-slate-400 ml-1.5 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-transparent">
-                        {tx.type}
-                      </span>
-                    </td>
-
-                    {/* Risk Score */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-14 bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              tx.riskScore >= 0.65
-                                ? "bg-rose-500"
-                                : tx.riskScore >= 0.35
-                                ? "bg-amber-400"
-                                : "bg-emerald-400"
-                            }`}
-                            style={{ width: `${Math.min(100, Math.max(5, tx.riskScore * 100))}%` }}
-                          />
-                        </div>
-                        <span
-                          className={`font-mono font-bold text-xs ${
-                            tx.riskScore >= 0.65
-                              ? "text-rose-600 dark:text-rose-400"
-                              : tx.riskScore >= 0.35
-                              ? "text-amber-600 dark:text-amber-400"
-                              : "text-emerald-600 dark:text-emerald-400"
-                          }`}
-                        >
-                          {(tx.riskScore * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-5 py-4 text-center">
-                      <span
-                        className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          tx.status === "APPROVED"
-                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700/60"
-                            : tx.status === "FLAGGED"
-                            ? "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700/60"
-                            : "bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-700/60"
-                        }`}
-                      >
-                        <span>{tx.status}</span>
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        {/* Customer Slip Button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setReceiptModalTx(tx);
-                          }}
-                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition cursor-pointer"
-                          title="Print or view customer settlement slip"
-                        >
-                          <Printer className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                          <span className="hidden xl:inline">Slip</span>
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleInspectInCopilot(tx);
-                          }}
-                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-cyan-950/80 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-cyan-300 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 transition cursor-pointer shadow-sm dark:shadow-none whitespace-nowrap"
-                          title="Inspect transaction against BOT & AMLO regulations in Copilot"
-                        >
-                          <span>Copilot</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* OFFICIAL PRINTABLE CUSTOMER SETTLEMENT RECEIPT MODAL                      */}
+      {/* RECENT SETTLEMENT FEED & SYSTEM RADAR                                     */}
       {/* ========================================================================= */}
-      {receiptModalTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-white dark:bg-[#060a14] border border-slate-200 dark:border-cyan-700/60 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-800 dark:text-slate-200 max-h-[92vh] overflow-y-auto">
-            {/* Modal Top Actions */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 print:hidden">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white">
-                  <Printer className="w-4.5 h-4.5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
-                    Customer Settlement Receipt
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Official Double-Entry ACID Transaction Slip
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setReceiptModalTx(null)}
-                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 overflow-hidden shadow-xl">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/40">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 flex items-center justify-center">
+              <Activity className="w-4 h-4" />
             </div>
-
-            {/* Printable Bank Receipt Body */}
-            <div className="mt-5 p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 space-y-4 font-sans text-xs">
-              {/* Receipt Header */}
-              <div className="text-center pb-3 border-b border-dashed border-slate-300 dark:border-slate-800 space-y-1">
-                <div className="font-black text-sm text-slate-900 dark:text-white uppercase tracking-wider">
-                  FinGuard AI Sovereign Settlement
-                </div>
-                <div className="text-[11px] text-slate-500">
-                  Headquarters &bull; Double-Entry Core Banking
-                </div>
-                <div className="font-mono text-[10px] text-cyan-700 dark:text-cyan-400 font-bold">
-                  Ref: {receiptModalTx.id}
-                </div>
-              </div>
-
-              {/* Transaction Amount Hero */}
-              <div className="text-center py-2 bg-slate-100 dark:bg-slate-900/80 rounded-xl">
-                <div className="text-[10px] font-bold text-slate-500 uppercase">Settled Amount</div>
-                <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
-                  ฿{Number(receiptModalTx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </div>
-                <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                  Status: {receiptModalTx.status} (ACID Non-Repudiation)
-                </div>
-              </div>
-
-              {/* Debit / Credit Details */}
-              <div className="space-y-2.5 font-mono text-xs">
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-500">Sender Account:</span>
-                  <span className="font-bold text-slate-900 dark:text-white text-right">
-                    {receiptModalTx.sourceAccount.accountName} ({formatAccNo(receiptModalTx.sourceAccount.accountNumber)})
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-500">Receiver Account:</span>
-                  <span className="font-bold text-slate-900 dark:text-white text-right">
-                    {receiptModalTx.destinationAccount.accountName} ({formatAccNo(receiptModalTx.destinationAccount.accountNumber)})
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-500">Transaction Type:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {receiptModalTx.type}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-500">Timestamp:</span>
-                  <span className="text-slate-900 dark:text-white">
-                    {new Date(receiptModalTx.createdAt).toLocaleString()}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Risk Assessment:</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                    {(receiptModalTx.riskScore * 100).toFixed(0)}% ({receiptModalTx.riskReason || "Compliant"})
-                  </span>
-                </div>
-              </div>
-
-              {/* Cryptographic Hash */}
-              <div className="pt-2 border-t border-dashed border-slate-300 dark:border-slate-800 text-[10px] font-mono text-center space-y-1">
-                <div className="text-slate-500">Blockchain SHA-256 Audit Verification:</div>
-                <div className="text-cyan-700 dark:text-cyan-300 truncate font-bold" title={receiptModalTx.auditHash || ""}>
-                  {receiptModalTx.auditHash || "SHA-256 Verified"}
-                </div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Non-Repudiation Verified</div>
-              </div>
-            </div>
-
-            {/* Bottom Buttons */}
-            <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
-              <button
-                type="button"
-                onClick={printCustomerReceipt}
-                className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition cursor-pointer shadow-lg shadow-cyan-600/20"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Print Official Slip</span>
-              </button>
-
-              <div className="flex items-center space-x-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={() => handleCopyReceipt(receiptModalTx)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 transition cursor-pointer"
-                >
-                  {copiedReceipt ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedReceipt ? "Copied!" : "Copy Receipt Text"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setReceiptModalTx(null)}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition cursor-pointer"
-                >
-                  Close
-                </button>
-              </div>
+            <div>
+              <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
+                Live Transaction Activity Stream
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                Latest settlement mutations from Neon PostgreSQL database
+              </p>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Transaction Details Inspection Modal */}
-      {inspectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-white dark:bg-[#080d1a] border border-slate-200 dark:border-cyan-700/60 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-800 dark:text-slate-200 max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+          <Link
+            href="/reconciliation"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-cyan-700 dark:text-cyan-400 text-xs font-bold border border-slate-200 dark:border-slate-700/80 transition shadow-sm"
+          >
+            <span>View Full Ledger</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
+          {transactions.slice(0, 5).map((tx) => (
+            <div
+              key={tx.id}
+              className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition"
+            >
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700/60 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
-                  <FileCheck2 className="w-5 h-5" />
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
+                    tx.status === "APPROVED"
+                      ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800"
+                      : tx.status === "FLAGGED"
+                      ? "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800"
+                      : "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-800"
+                  }`}
+                >
+                  {tx.type === "CROSS_BORDER" ? "FX" : "TX"}
                 </div>
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Transaction Ledger Record</h3>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        inspectedTx.status === "APPROVED"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700/60"
-                          : inspectedTx.status === "FLAGGED"
-                          ? "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700/60"
-                          : "bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-700/60"
-                      }`}
-                    >
-                      {inspectedTx.status}
-                    </span>
+                  <div className="font-bold text-slate-900 dark:text-white">
+                    {tx.sourceAccount.accountName} &rarr; {tx.destinationAccount.accountName}
                   </div>
-                  <p className="font-mono text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    {inspectedTx.id} &bull; {new Date(inspectedTx.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setInspectedTx(null)}
-                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="mt-5 space-y-4 text-xs">
-              {/* Double-Entry Ledger Movement */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center space-x-1.5">
-                    <Scale className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                    <span>Double-Entry Settlement Breakdown</span>
-                  </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/50">
-                    Balanced (Net Zero Delta)
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  {/* Debit Account */}
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-950/80 border border-rose-200 dark:border-rose-900/40 shadow-sm dark:shadow-none">
-                    <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-                      Debit Account (Source)
-                    </div>
-                    <div className="font-bold text-slate-900 dark:text-white text-xs mt-1">
-                      {inspectedTx.sourceAccount.accountName}
-                    </div>
-                    <div className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                      {inspectedTx.sourceAccount.accountNumber}
-                    </div>
-                    <div className="mt-2 font-mono font-bold text-rose-600 dark:text-rose-300 text-xs">
-                      -฿{Number(inspectedTx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </div>
-                  </div>
-
-                  {/* Credit Account */}
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-950/80 border border-emerald-200 dark:border-emerald-900/40 shadow-sm dark:shadow-none">
-                    <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                      Credit Account (Destination)
-                    </div>
-                    <div className="font-bold text-slate-900 dark:text-white text-xs mt-1">
-                      {inspectedTx.destinationAccount.accountName}
-                    </div>
-                    <div className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                      {inspectedTx.destinationAccount.accountNumber}
-                    </div>
-                    <div className="mt-2 font-mono font-bold text-emerald-600 dark:text-emerald-300 text-xs">
-                      +฿{Number(inspectedTx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </div>
+                  <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                    Ref: {tx.id.slice(0, 18)}... &bull; {new Date(tx.createdAt).toLocaleTimeString()}
                   </div>
                 </div>
               </div>
 
-              {/* Risk Engine Assessment */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center space-x-1.5">
-                    <ShieldAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                    <span>Autonomous Risk Evaluation</span>
-                  </span>
-                  <span
-                    className={`font-mono font-bold text-xs ${
-                      inspectedTx.riskScore >= 0.65
-                        ? "text-rose-600 dark:text-rose-400"
-                        : inspectedTx.riskScore >= 0.35
-                        ? "text-amber-600 dark:text-amber-400"
-                        : "text-emerald-600 dark:text-emerald-400"
-                    }`}
-                  >
-                    Risk Score: {(inspectedTx.riskScore * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-300 font-mono text-[11px] leading-relaxed border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none">
-                  {inspectedTx.riskReason || "Parameters compliant with standard thresholds."}
-                </div>
-              </div>
-
-              {/* PDPA Intercepted Metadata */}
-              {inspectedTx.metadata && (
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center space-x-1.5">
-                      <Lock className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                      <span>PDPA / PII Intercepted Metadata</span>
-                    </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-100 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-700/50">
-                      PII Masked
-                    </span>
+              <div className="flex items-center justify-between sm:justify-end space-x-4">
+                <div className="text-right">
+                  <div className="font-mono font-extrabold text-slate-900 dark:text-white text-sm">
+                    ฿{Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </div>
-                  <pre className="p-3 rounded-xl bg-slate-100 dark:bg-slate-950 text-cyan-900 dark:text-cyan-200 font-mono text-[11px] overflow-x-auto border border-slate-200 dark:border-slate-800">
-                    {JSON.stringify(inspectedTx.metadata, null, 2)}
-                  </pre>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center space-x-2 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const tx = inspectedTx;
-                      setReceiptModalTx(tx);
-                    }}
-                    className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition cursor-pointer border border-slate-300 dark:border-slate-700"
-                  >
-                    <Printer className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-                    <span>Print Customer Slip</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const tx = inspectedTx;
-                      setInspectedTx(null);
-                      handleInspectInCopilot(tx);
-                    }}
-                    className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs transition cursor-pointer shadow-lg shadow-cyan-600/20"
-                  >
-                    <Bot className="w-4 h-4" />
-                    <span>Analyze in Copilot</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    Risk: {(tx.riskScore * 100).toFixed(0)}% ({tx.status})
+                  </div>
                 </div>
 
                 <button
-                  onClick={() => setInspectedTx(null)}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white font-bold text-xs transition cursor-pointer text-center border border-slate-300 dark:border-transparent"
+                  onClick={() => {
+                    setSelectedTransaction(tx);
+                    router.push(`/compliance?txId=${tx.id}`);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 transition"
                 >
-                  Close Inspection
+                  Inspect
                 </button>
               </div>
             </div>
-          </div>
+          ))}
         </div>
-      )}
-
+      </div>
     </div>
-  );
-}
-
-function X(props: { className?: string }) {
-  return (
-    <svg className={props.className || "w-5 h-5"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M18 6L6 18M6 6l12 12" />
-    </svg>
   );
 }

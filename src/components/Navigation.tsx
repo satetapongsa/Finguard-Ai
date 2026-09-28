@@ -13,6 +13,8 @@ import {
   Moon,
   PlusCircle,
   UserPlus,
+  CreditCard,
+  Scale,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import type { RoleType } from "@/lib/types";
@@ -86,8 +88,10 @@ export default function Navigation() {
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Teller Desk", href: "/teller", icon: CreditCard },
+    { label: "Reconciliation", href: "/reconciliation", icon: Scale },
+    { label: "AI Copilot", href: "/compliance", icon: Bot },
     { label: "Audit Trail", href: "/audit", icon: FileCheck },
-    { label: "Compliance", href: "/compliance", icon: Bot },
   ];
 
   return (

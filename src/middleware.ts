@@ -40,20 +40,19 @@ function checkRateLimit(ip: string): { allowed: boolean; remaining: number; rese
   return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW - entry.count, resetIn: entry.resetTime - now };
 }
 
-// Route Access Matrix
 const ROLE_PERMISSIONS: Record<RoleType, { allowedRoutes: RegExp[]; forbiddenMethods: Record<string, string[]> }> = {
   ADMIN: {
-    allowedRoutes: [/^\/dashboard/, /^\/compliance/, /^\/audit/, /^\/api\//],
+    allowedRoutes: [/^\/dashboard/, /^\/teller/, /^\/reconciliation/, /^\/compliance/, /^\/audit/, /^\/api\//],
     forbiddenMethods: {},
   },
   COMPLIANCE_OFFICER: {
-    allowedRoutes: [/^\/dashboard/, /^\/compliance/, /^\/audit/, /^\/api\//],
+    allowedRoutes: [/^\/dashboard/, /^\/teller/, /^\/reconciliation/, /^\/compliance/, /^\/audit/, /^\/api\//],
     forbiddenMethods: {
       // Compliance officers can execute transactions and review policies
     },
   },
   AUDITOR: {
-    allowedRoutes: [/^\/dashboard/, /^\/audit/, /^\/api\/audit/, /^\/api\/stats/, /^\/api\/transactions/, /^\/api\/health/],
+    allowedRoutes: [/^\/dashboard/, /^\/reconciliation/, /^\/audit/, /^\/api\/audit/, /^\/api\/stats/, /^\/api\/transactions/, /^\/api\/health/],
     forbiddenMethods: {
       // Auditors are strictly READ-ONLY on ledger mutations
       "/api/transactions": ["POST"],
@@ -159,6 +158,8 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/teller/:path*",
+    "/reconciliation/:path*",
     "/compliance/:path*",
     "/audit/:path*",
     "/api/:path*",
