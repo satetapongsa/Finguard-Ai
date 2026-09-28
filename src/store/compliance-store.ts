@@ -48,6 +48,7 @@ interface ComplianceState {
   setCachedAccounts: (accounts: AccountData[]) => void;
   setCachedTransactions: (transactions: TransactionWithAccounts[]) => void;
   syncAllData: () => Promise<void>;
+  triggerFullSyncAndRefresh: () => Promise<void>;
 }
 
 export const useComplianceStore = create<ComplianceState>((set, get) => ({
@@ -102,6 +103,55 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
       });
     } catch (err) {
       console.error("Non-blocking background data sync failed:", err);
+    }
+  },
+
+  triggerFullSyncAndRefresh: async () => {
+    set({
+      isProcessingTransaction: true,
+      processingMessage: "Synchronizing database records & clearing cache...",
+    });
+
+    try {
+      // Clear in-memory cache to force fresh pull
+      set({
+        cachedStats: null,
+        cachedAccounts: [],
+        cachedTransactions: [],
+      });
+
+      // Bust browser HTTP cache with timestamp query
+      const bust = Date.now();
+      const [statsRes, txRes, accRes] = await Promise.all([
+        fetch(`/api/stats?_t=${bust}`),
+        fetch(`/api/transactions?limit=100&_t=${bust}`),
+        fetch(`/api/accounts?_t=${bust}`),
+      ]);
+
+      const [statsData, txData, accData] = await Promise.all([
+        statsRes.json(),
+        txRes.json(),
+        accRes.json(),
+      ]);
+
+      set({
+        cachedStats: statsData.success ? statsData.data : null,
+        cachedTransactions: txData.success ? txData.data : [],
+        cachedAccounts: accData.success ? accData.data : [],
+        lastFetchedAt: Date.now(),
+      });
+
+      // Dispatch global sync event to notify all active views
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("finguard_tx_updated"));
+      }
+
+      // Small delay so user sees confirmation before overlay dismisses
+      await new Promise((r) => setTimeout(r, 600));
+    } catch (err) {
+      console.error("Full database sync and cache purge error:", err);
+    } finally {
+      set({ isProcessingTransaction: false });
     }
   },
 }));

@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const cachedTransactions = useComplianceStore((s) => s.cachedTransactions);
   const setCachedStats = useComplianceStore((s) => s.setCachedStats);
   const setCachedTransactions = useComplianceStore((s) => s.setCachedTransactions);
+  const triggerFullSyncAndRefresh = useComplianceStore((s) => s.triggerFullSyncAndRefresh);
 
   const [stats, setStats] = useState<DashboardStats | null>(() => cachedStats);
   const [transactions, setTransactions] = useState<TransactionWithAccounts[] | null>(() => cachedTransactions.length > 0 ? cachedTransactions : null);
@@ -180,9 +181,10 @@ export default function DashboardPage() {
         {/* Top Actions */}
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => loadData(true)}
+            onClick={() => triggerFullSyncAndRefresh()}
             disabled={loading}
-            className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm transition cursor-pointer whitespace-nowrap"
+            className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm transition cursor-pointer whitespace-nowrap active:scale-95"
+            title="Purge cache and pull fresh data directly from PostgreSQL"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-600 dark:text-cyan-400" : ""}`} />
             <span>Sync</span>

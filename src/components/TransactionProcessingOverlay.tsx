@@ -33,7 +33,7 @@ export default function TransactionProcessingOverlay() {
 
         {/* Status text */}
         <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
-          Processing Transaction
+          {message && message.includes("Synchronizing") ? "Synchronizing Database" : "Processing Transaction"}
         </h3>
         <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 font-medium">
           {message || "Recording transaction and securing audit trail..."}

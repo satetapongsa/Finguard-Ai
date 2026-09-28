@@ -16,8 +16,10 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { AuditLogItem, AuditChainVerificationResult } from "@/lib/types";
+import { useComplianceStore } from "@/store/compliance-store";
 
 export default function AuditExplorerPage() {
+  const triggerFullSyncAndRefresh = useComplianceStore((s) => s.triggerFullSyncAndRefresh);
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
@@ -116,9 +118,13 @@ export default function AuditExplorerPage() {
           </button>
 
           <button
-            onClick={fetchLogs}
+            onClick={async () => {
+              await triggerFullSyncAndRefresh();
+              await fetchLogs();
+            }}
             disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-bold border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none transition cursor-pointer"
+            className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-bold border border-slate-200 dark:border-slate-700/80 shadow-sm dark:shadow-none transition cursor-pointer active:scale-95"
+            title="Purge cache and pull fresh audit trail directly from PostgreSQL"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-cyan-600 dark:text-cyan-400" : ""}`} />
             <span>Sync Audit Log</span>
