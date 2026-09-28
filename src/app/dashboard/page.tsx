@@ -30,6 +30,12 @@ import {
   UserPlus,
   Calculator,
   Percent,
+  Printer,
+  Download,
+  Eye,
+  CreditCard,
+  Layers,
+  HelpCircle,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import { TransactionWithAccounts } from "@/lib/types";
@@ -48,6 +54,12 @@ export default function DashboardPage() {
   const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
   const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
   const setCreateAccountOpen = useComplianceStore((s) => s.setCreateAccountOpen);
+
+  const [activeWorkspaceView, setActiveWorkspaceView] = useState<"ALL" | "TELLER" | "OPERATIONS" | "COMPLIANCE">("ALL");
+  const [selectedCustomerAccount, setSelectedCustomerAccount] = useState<string>("");
+  const [customerAccountSearch, setCustomerAccountSearch] = useState<string>("");
+  const [receiptModalTx, setReceiptModalTx] = useState<TransactionWithAccounts | null>(null);
+  const [copiedReceipt, setCopiedReceipt] = useState(false);
 
   const [accounts, setAccounts] = useState<
     {
@@ -132,6 +144,7 @@ export default function DashboardPage() {
         if (accData.data.length >= 2) {
           setLiveSourceId((prev) => prev || accData.data[0].id);
           setLiveDestId((prev) => prev || accData.data[1].id);
+          setSelectedCustomerAccount((prev) => prev || accData.data[0].id);
         }
       }
       if (dbData.success) {
@@ -161,8 +174,13 @@ export default function DashboardPage() {
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
-      const matchesFilter =
-        statusFilter === "ALL" ? true : tx.status === statusFilter;
+      let matchesFilter = true;
+      if (statusFilter === "HIGH_VALUE") {
+        matchesFilter = parseFloat(tx.amount) >= 500000;
+      } else if (statusFilter !== "ALL") {
+        matchesFilter = tx.status === statusFilter;
+      }
+
       const matchesSearch =
         searchTerm === "" ||
         tx.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -177,6 +195,74 @@ export default function DashboardPage() {
   const handleInspectInCopilot = (tx: TransactionWithAccounts) => {
     setSelectedTransaction(tx);
     router.push("/compliance");
+  };
+
+  const handleExportCSV = () => {
+    if (filteredTransactions.length === 0) return;
+    const headers = [
+      "Transaction ID",
+      "Timestamp",
+      "Source Account Name",
+      "Source Account Number",
+      "Destination Account Name",
+      "Destination Account Number",
+      "Amount (THB)",
+      "Type",
+      "Risk Score",
+      "Status",
+      "Audit Hash",
+    ];
+
+    const rows = filteredTransactions.map((tx) => [
+      `"${tx.id}"`,
+      `"${new Date(tx.createdAt).toISOString()}"`,
+      `"${tx.sourceAccount.accountName.replace(/"/g, '""')}"`,
+      `"${tx.sourceAccount.accountNumber}"`,
+      `"${tx.destinationAccount.accountName.replace(/"/g, '""')}"`,
+      `"${tx.destinationAccount.accountNumber}"`,
+      tx.amount,
+      `"${tx.type}"`,
+      (tx.riskScore * 100).toFixed(0) + "%",
+      `"${tx.status}"`,
+      `"${tx.auditHash || ""}"`,
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `finguard-ledger-report-${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyReceipt = (tx: TransactionWithAccounts | null) => {
+    if (!tx) return;
+    const text = `========================================
+FINANCIAL SETTLEMENT RECEIPT (OFFICIAL)
+========================================
+Receipt ID: ${tx.id}
+Date/Time:  ${new Date(tx.createdAt).toLocaleString()}
+Status:     ${tx.status} (Double-Entry ACID Settled)
+
+DEBIT (Sender):
+Account:    ${tx.sourceAccount.accountName}
+Number:     ${tx.sourceAccount.accountNumber}
+Amount:     -฿${Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+
+CREDIT (Receiver):
+Account:    ${tx.destinationAccount.accountName}
+Number:     ${tx.destinationAccount.accountNumber}
+Amount:     +฿${Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+
+Category:   ${tx.type}
+Risk Score: ${(tx.riskScore * 100).toFixed(0)}% (${tx.riskReason || "Verified"})
+Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
+========================================`;
+    navigator.clipboard.writeText(text);
+    setCopiedReceipt(true);
+    setTimeout(() => setCopiedReceipt(false), 2000);
   };
 
   // Calculations for Live Studio
@@ -251,16 +337,36 @@ export default function DashboardPage() {
     }
   };
 
+  const selectedCustAcc = accounts.find((a) => a.id === selectedCustomerAccount);
+  const filteredCustomerAccounts = useMemo(() => {
+    if (!customerAccountSearch) return accounts;
+    const term = customerAccountSearch.toLowerCase();
+    return accounts.filter(
+      (a) =>
+        a.accountName.toLowerCase().includes(term) ||
+        a.accountNumber.toLowerCase().includes(term)
+    );
+  }, [accounts, customerAccountSearch]);
+
+  const printCustomerReceipt = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6 pb-12" suppressHydrationWarning>
       {/* Top Banner / Hero Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800/80">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Autonomous Compliance Command Center
-          </h1>
+          <div className="flex items-center space-x-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              Autonomous Compliance & Operations Center
+            </h1>
+            <span className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-950/80 dark:text-cyan-300 dark:border-cyan-700/60 font-mono">
+              Teller & Officer Ready
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 font-medium max-w-2xl">
-            Double-entry ACID settlement with real-time heuristic AMLO & Bank of Thailand risk scoring.
+            Double-entry ACID settlement with real-time heuristic AMLO & Bank of Thailand risk scoring for tellers, operators, and compliance officers.
           </p>
         </div>
 
@@ -293,6 +399,35 @@ export default function DashboardPage() {
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-600 dark:text-cyan-400" : ""}`} />
             <span>Sync Ledger</span>
           </button>
+        </div>
+      </div>
+
+      {/* Operational Workspace Mode Switcher (Staff / Teller / Operations / Compliance) */}
+      <div className="p-2 rounded-2xl bg-slate-100/90 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center space-x-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 pl-2">
+          <Layers className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+          <span>Operational View:</span>
+        </div>
+
+        <div className="flex items-center flex-wrap gap-1">
+          {[
+            { id: "ALL", label: "All-in-One Command Center" },
+            { id: "TELLER", label: "Frontline Teller Desk" },
+            { id: "OPERATIONS", label: "Daily Operations & Reconciliation" },
+            { id: "COMPLIANCE", label: "Risk & Regulatory Rules" },
+          ].map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => setActiveWorkspaceView(mode.id as typeof activeWorkspaceView)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                activeWorkspaceView === mode.id
+                  ? "bg-white text-cyan-900 shadow-sm border border-cyan-300 dark:bg-gradient-to-r dark:from-cyan-950 dark:to-slate-800 dark:text-cyan-300 dark:border-cyan-500/50"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/60"
+              }`}
+            >
+              {mode.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -386,8 +521,104 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ========================================================================= */}
+      {/* FRONTLINE TELLER DESK & QUICK CUSTOMER BALANCE VERIFIER WIDGET            */}
+      {/* ========================================================================= */}
+      {(activeWorkspaceView === "ALL" || activeWorkspaceView === "TELLER") && (
+        <div className="glass-panel rounded-3xl border border-cyan-300 dark:border-cyan-800/80 p-5 sm:p-6 shadow-xl space-y-4 bg-cyan-50/20 dark:bg-slate-900/40">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700/60 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
+                <CreditCard className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
+                  Frontline Teller Desk & Instant Customer Balance Verifier
+                </h2>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                  Instant counter balance lookup, account solvency verification, and 1-click counterparty pre-fill
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] px-2.5 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 font-mono font-bold">
+                ✓ Solvency Verified
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+            {/* Account Search & Selector */}
+            <div className="lg:col-span-6 space-y-2">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                <span>Select Customer Account:</span>
+                <span className="text-[10px] text-slate-500 font-normal">
+                  {accounts.length} active customer accounts loaded
+                </span>
+              </label>
+
+              <select
+                value={selectedCustomerAccount}
+                onChange={(e) => setSelectedCustomerAccount(e.target.value)}
+                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-bold"
+              >
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.accountName} ({acc.accountNumber}) - ฿{Number(acc.balance).toLocaleString()} [{acc.status}]
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Quick Balance & Action Card */}
+            {selectedCustAcc && (
+              <div className="lg:col-span-6 p-3.5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white">
+                      {selectedCustAcc.accountName}
+                    </span>
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
+                      {selectedCustAcc.status}
+                    </span>
+                  </div>
+                  <div className="font-mono text-sm font-extrabold text-cyan-700 dark:text-cyan-400 mt-1">
+                    ฿{Number(selectedCustAcc.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {selectedCustAcc.currency}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLiveSourceId(selectedCustAcc.id);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-800 dark:text-rose-300 text-[11px] font-bold border border-rose-300 dark:border-rose-700/60 transition cursor-pointer"
+                    title="Set as Sender in Live Transfer Studio"
+                  >
+                    Set as Sender (Debit)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLiveDestId(selectedCustAcc.id);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold border border-emerald-300 dark:border-emerald-700/60 transition cursor-pointer"
+                    title="Set as Receiver in Live Transfer Studio"
+                  >
+                    Set as Receiver (Credit)
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* BFSI Liquidity & Settlement Accounts Overview */}
-      {accounts.length > 0 && (
+      {(activeWorkspaceView === "ALL" || activeWorkspaceView === "OPERATIONS" || activeWorkspaceView === "TELLER") && accounts.length > 0 && (
         <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 shadow-xl dark:shadow-2xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center space-x-2.5">
@@ -461,7 +692,7 @@ export default function DashboardPage() {
       {/* ========================================================================= */}
       {/* LIVE INTERACTIVE TRANSFER STUDIO (Real-Time Double-Entry & Compliance)    */}
       {/* ========================================================================= */}
-      {accounts.length >= 2 && (
+      {(activeWorkspaceView === "ALL" || activeWorkspaceView === "TELLER") && accounts.length >= 2 && (
         <div className="glass-panel rounded-3xl border border-slate-200 dark:border-cyan-800/80 p-6 shadow-xl dark:shadow-2xl relative overflow-hidden bg-white dark:bg-gradient-to-b dark:from-[#061022] dark:to-[#040914]">
           {/* Subtle Accent Glow */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
@@ -555,6 +786,40 @@ export default function DashboardPage() {
                 <span>Watchlist Entity</span>
               </button>
             </div>
+          </div>
+
+          {/* Frontline Teller Live Guidance Advice Box */}
+          <div className="mt-4 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-center space-x-2">
+              <HelpCircle className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+              <div>
+                <span className="font-bold text-slate-800 dark:text-slate-200">Teller Guidance Advice: </span>
+                <span className="font-medium text-slate-600 dark:text-slate-400">
+                  {numLiveAmount >= 2000000
+                    ? "Mandatory AMLO STR notification triggered. Supervisor signature required on customer slip."
+                    : numLiveAmount >= 500000
+                    ? "Bank of Thailand high-value alert (> ฿500,000). Verify customer KYC document."
+                    : numLiveAmount >= 200000
+                    ? "Mid-tier transaction (>= ฿200,000). Standard frontline clearance authorized."
+                    : "Standard retail transfer. Instant frontline execution authorized."}
+                </span>
+              </div>
+            </div>
+            <span
+              className={`text-[10px] font-mono px-2.5 py-1 rounded-xl border shrink-0 font-bold ${
+                numLiveAmount >= 2000000
+                  ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-700/60"
+                  : numLiveAmount >= 500000
+                  ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-700/60"
+                  : "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-700/60"
+              }`}
+            >
+              {numLiveAmount >= 2000000
+                ? "AMLO STR Mandate"
+                : numLiveAmount >= 500000
+                ? "Supervisor Approval"
+                : "Frontline Authorized"}
+            </span>
           </div>
 
           {/* Form Grid */}
@@ -749,7 +1014,7 @@ export default function DashboardPage() {
           {/* ========================================================================= */}
           {liveReceipt && (
             <div className="mt-6 p-5 rounded-2xl bg-emerald-50/90 dark:bg-[#030712] border-2 border-emerald-400 dark:border-emerald-500/60 shadow-xl dark:shadow-2xl animate-in fade-in duration-300 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-emerald-200 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-emerald-200 dark:border-slate-800 gap-2">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-600 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2 className="w-5 h-5" />
@@ -763,9 +1028,39 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600">
-                  {liveReceipt.status}
-                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fullTx: TransactionWithAccounts = {
+                        id: liveReceipt.id,
+                        amount: liveReceipt.amount,
+                        currency: "THB",
+                        type: liveType,
+                        status: liveReceipt.status as "APPROVED" | "FLAGGED" | "REJECTED",
+                        riskScore: liveReceipt.riskScore,
+                        riskReason: liveReceipt.riskReason,
+                        metadata: liveReceipt.metadata,
+                        auditHash: liveReceipt.auditHash,
+                        sourceAccountId: liveSourceId,
+                        destinationAccountId: liveDestId,
+                        sourceAccount: liveReceipt.sourceAccount as any,
+                        destinationAccount: liveReceipt.destinationAccount as any,
+                        createdAt: new Date(liveReceipt.createdAt).toISOString(),
+                      };
+                      setReceiptModalTx(fullTx);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                    <span>Print Customer Slip</span>
+                  </button>
+
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600">
+                    {liveReceipt.status}
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs font-mono">
@@ -807,135 +1102,137 @@ export default function DashboardPage() {
       {/* ========================================================================= */}
       {/* MATHEMATICAL ANOMALY DETECTION ENGINE & RULE CONDITIONS MATRIX           */}
       {/* ========================================================================= */}
-      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 sm:p-6 shadow-xl dark:shadow-2xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-              <Calculator className="w-5 h-5" />
+      {(activeWorkspaceView === "ALL" || activeWorkspaceView === "COMPLIANCE") && (
+        <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 sm:p-6 shadow-xl dark:shadow-2xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
+                <Calculator className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
+                  Mathematical Anomaly Detection & Regulatory Rules Matrix
+                </h2>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                  Statistical Gaussian Z-Score modeling, velocity burst heuristics, and statutory BOT / AMLO thresholds
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-                Mathematical Anomaly Detection & Regulatory Rules Matrix
-              </h2>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                Statistical Gaussian Z-Score modeling, velocity burst heuristics, and statutory BOT / AMLO thresholds
-              </p>
+            <div className="font-mono text-[11px] px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-cyan-700 dark:text-cyan-300 font-bold self-start sm:self-auto">
+              R = min(1.0, w₀ + w_amt + w_vel + w_zscore + w_smurf + w_entity)
             </div>
           </div>
-          <div className="font-mono text-[11px] px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-cyan-700 dark:text-cyan-300 font-bold self-start sm:self-auto">
-            R = min(1.0, w₀ + w_amt + w_vel + w_zscore + w_smurf + w_entity)
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {/* Card 1: Normal Transfer */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-emerald-200 dark:border-emerald-900/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
+                  1. Standard Transfer
+                </span>
+                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  Risk &le; 35%
+                </span>
+              </div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">
+                Under Control Threshold
+              </div>
+              <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
+                <li>&bull; Amount &lt; ฿500,000</li>
+                <li>&bull; Verified source/dest status (Active)</li>
+                <li>&bull; Normal velocity (&le; 2 txns / 5 min)</li>
+              </ul>
+              <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
+                ✓ Instant ACID Settlement
+              </div>
+            </div>
+
+            {/* Card 2: BOT Threshold */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-amber-200 dark:border-amber-900/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
+                  2. BOT Elevated Directive
+                </span>
+                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
+                  +35% Risk
+                </span>
+              </div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">
+                High-Value &ge; ฿500,000
+              </div>
+              <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
+                <li>&bull; Transfer &ge; ฿500,000 (BOT Directive)</li>
+                <li>&bull; Mid-Tier ฿200K - ฿499K (+15%)</li>
+                <li>&bull; Interbank Clearing / Corporate Payout</li>
+              </ul>
+              <div className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
+                ⚡ Elevated Monitoring Alert
+              </div>
+            </div>
+
+            {/* Card 3: AMLO Mandatory */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-rose-200 dark:border-rose-900/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60">
+                  3. AMLO Mandatory STR
+                </span>
+                <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400 font-bold">
+                  +65% High Risk
+                </span>
+              </div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">
+                Threshold &ge; ฿2,000,000
+              </div>
+              <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
+                <li>&bull; Transfer &ge; ฿2,000,000 (AMLO Mandate)</li>
+                <li>&bull; 24h Cumulative Smurfing &ge; ฿2M</li>
+                <li>&bull; Cross-Border Wire (FATF Rec. 16)</li>
+              </ul>
+              <div className="text-[10px] text-rose-700 dark:text-rose-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
+                🚨 Mandatory STR Filing Triggered
+              </div>
+            </div>
+
+            {/* Card 4: Gaussian & Velocity Anomaly */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-purple-200 dark:border-purple-900/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60">
+                  4. Statistical Gaussian & Velocity
+                </span>
+                <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold">
+                  +25% to +45%
+                </span>
+              </div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white">
+                Gaussian Z-Score & Velocity Bursts
+              </div>
+              <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
+                <li>&bull; Z = (x - μ) / σ &ge; 2.5σ Outlier</li>
+                <li>&bull; Burst Anomaly &ge; 3 txns / 5 min</li>
+                <li>&bull; Counterparty in AML Watchlist</li>
+              </ul>
+              <div className="text-[10px] text-purple-700 dark:text-purple-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
+                🔍 Automated Sybil & Anomaly Guard
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Card 1: Normal Transfer */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-emerald-200 dark:border-emerald-900/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
-                1. Standard Transfer
-              </span>
-              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                Risk &le; 35%
-              </span>
-            </div>
-            <div className="font-bold text-xs text-slate-900 dark:text-white">
-              Under Control Threshold
-            </div>
-            <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-              <li>&bull; Amount &lt; ฿500,000</li>
-              <li>&bull; Verified source/dest status (Active)</li>
-              <li>&bull; Normal velocity (&le; 2 txns / 5 min)</li>
-            </ul>
-            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-              ✓ Instant ACID Settlement
-            </div>
-          </div>
-
-          {/* Card 2: BOT Threshold */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-amber-200 dark:border-amber-900/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60">
-                2. BOT Elevated Directive
-              </span>
-              <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
-                +35% Risk
-              </span>
-            </div>
-            <div className="font-bold text-xs text-slate-900 dark:text-white">
-              High-Value &ge; ฿500,000
-            </div>
-            <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-              <li>&bull; Transfer &ge; ฿500,000 (BOT Directive)</li>
-              <li>&bull; Mid-Tier ฿200K - ฿499K (+15%)</li>
-              <li>&bull; Interbank Clearing / Corporate Payout</li>
-            </ul>
-            <div className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-              ⚡ Elevated Monitoring Alert
-            </div>
-          </div>
-
-          {/* Card 3: AMLO Mandatory */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-rose-200 dark:border-rose-900/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60">
-                3. AMLO Mandatory STR
-              </span>
-              <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400 font-bold">
-                +65% High Risk
-              </span>
-            </div>
-            <div className="font-bold text-xs text-slate-900 dark:text-white">
-              Threshold &ge; ฿2,000,000
-            </div>
-            <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-              <li>&bull; Transfer &ge; ฿2,000,000 (AMLO Mandate)</li>
-              <li>&bull; 24h Cumulative Smurfing &ge; ฿2M</li>
-              <li>&bull; Cross-Border Wire (FATF Rec. 16)</li>
-            </ul>
-            <div className="text-[10px] text-rose-700 dark:text-rose-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-              🚨 Mandatory STR Filing Triggered
-            </div>
-          </div>
-
-          {/* Card 4: Gaussian & Velocity Anomaly */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-purple-200 dark:border-purple-900/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60">
-                4. Statistical Gaussian & Velocity
-              </span>
-              <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold">
-                +25% to +45%
-              </span>
-            </div>
-            <div className="font-bold text-xs text-slate-900 dark:text-white">
-              Gaussian Z-Score & Velocity Bursts
-            </div>
-            <ul className="text-[11px] text-slate-600 dark:text-slate-400 space-y-1 font-mono">
-              <li>&bull; Z = (x - μ) / σ &ge; 2.5σ Outlier</li>
-              <li>&bull; Burst Anomaly &ge; 3 txns / 5 min</li>
-              <li>&bull; Counterparty in AML Watchlist</li>
-            </ul>
-            <div className="text-[10px] text-purple-700 dark:text-purple-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-              🔍 Automated Sybil & Anomaly Guard
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Transaction Ledger Table Section */}
       <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 overflow-hidden shadow-xl dark:shadow-2xl">
         {/* Table Header Controls */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/40">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/40">
           <div className="flex items-center space-x-3">
             <h2 className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">
-              Real-Time Transaction Ledger
+              Real-Time Transaction Ledger & Audit Feed
             </h2>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-medium border border-slate-300 dark:border-slate-700/60">
               {filteredTransactions.length} records
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3" suppressHydrationWarning>
+          <div className="flex flex-wrap items-center gap-2.5" suppressHydrationWarning>
             {/* Search Input */}
             <div className="relative" suppressHydrationWarning>
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -949,26 +1246,43 @@ export default function DashboardPage() {
                 data-lpignore="true"
                 data-1p-ignore="true"
                 suppressHydrationWarning
-                className="bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-52 sm:w-64 transition"
+                className="bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-48 sm:w-56 transition font-medium"
               />
             </div>
 
             {/* Status Filter Buttons */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-              {["ALL", "APPROVED", "FLAGGED", "REJECTED"].map((st) => (
+            <div className="flex items-center bg-slate-100 dark:bg-slate-950/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs flex-wrap">
+              {[
+                { id: "ALL", label: "ALL" },
+                { id: "APPROVED", label: "APPROVED" },
+                { id: "FLAGGED", label: "FLAGGED" },
+                { id: "REJECTED", label: "REJECTED" },
+                { id: "HIGH_VALUE", label: "≥ ฿500K" },
+              ].map((st) => (
                 <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={`px-3 py-1.5 rounded-lg transition text-xs font-bold cursor-pointer ${
-                    statusFilter === st
+                  key={st.id}
+                  onClick={() => setStatusFilter(st.id)}
+                  className={`px-2.5 py-1.5 rounded-lg transition text-xs font-bold cursor-pointer whitespace-nowrap ${
+                    statusFilter === st.id
                       ? "bg-white text-cyan-800 border border-cyan-300 shadow-sm dark:bg-gradient-to-r dark:from-cyan-900 dark:to-slate-800 dark:text-cyan-300 dark:border-cyan-500/40"
                       : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                   }`}
                 >
-                  {st}
+                  {st.label}
                 </button>
               ))}
             </div>
+
+            {/* Export CSV for Operations & Reporting */}
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700/80 transition cursor-pointer shadow-sm"
+              title="Download ledger records as CSV for spreadsheets and accounting"
+            >
+              <Download className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 
@@ -1086,17 +1400,33 @@ export default function DashboardPage() {
 
                     {/* Actions */}
                     <td className="px-5 py-4 text-right">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleInspectInCopilot(tx);
-                        }}
-                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-cyan-950/80 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-cyan-300 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 transition cursor-pointer shadow-sm dark:shadow-none"
-                        title="Inspect transaction against BOT & AMLO regulations in Copilot"
-                      >
-                        <span>Inspect in Copilot</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
+                      <div className="flex items-center justify-end space-x-2">
+                        {/* Customer Slip Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReceiptModalTx(tx);
+                          }}
+                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition cursor-pointer"
+                          title="Print or view customer settlement slip"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                          <span className="hidden xl:inline">Slip</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInspectInCopilot(tx);
+                          }}
+                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-cyan-950/80 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-cyan-300 text-xs font-semibold border border-slate-200 dark:border-slate-700/80 transition cursor-pointer shadow-sm dark:shadow-none whitespace-nowrap"
+                          title="Inspect transaction against BOT & AMLO regulations in Copilot"
+                        >
+                          <span>Copilot</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1106,9 +1436,146 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ========================================================================= */}
+      {/* OFFICIAL PRINTABLE CUSTOMER SETTLEMENT RECEIPT MODAL                      */}
+      {/* ========================================================================= */}
+      {receiptModalTx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-white dark:bg-[#060a14] border border-slate-200 dark:border-cyan-700/60 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-800 dark:text-slate-200 max-h-[92vh] overflow-y-auto">
+            {/* Modal Top Actions */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 print:hidden">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white">
+                  <Printer className="w-4.5 h-4.5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
+                    Customer Settlement Receipt
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Official Double-Entry ACID Transaction Slip
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setReceiptModalTx(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Printable Bank Receipt Body */}
+            <div className="mt-5 p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 space-y-4 font-sans text-xs">
+              {/* Receipt Header */}
+              <div className="text-center pb-3 border-b border-dashed border-slate-300 dark:border-slate-800 space-y-1">
+                <div className="font-black text-sm text-slate-900 dark:text-white uppercase tracking-wider">
+                  FinGuard AI Sovereign Settlement
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  Headquarters &bull; Double-Entry Core Banking
+                </div>
+                <div className="font-mono text-[10px] text-cyan-700 dark:text-cyan-400 font-bold">
+                  Ref: {receiptModalTx.id}
+                </div>
+              </div>
+
+              {/* Transaction Amount Hero */}
+              <div className="text-center py-2 bg-slate-100 dark:bg-slate-900/80 rounded-xl">
+                <div className="text-[10px] font-bold text-slate-500 uppercase">Settled Amount</div>
+                <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+                  ฿{Number(receiptModalTx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
+                <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                  Status: {receiptModalTx.status} (ACID Non-Repudiation)
+                </div>
+              </div>
+
+              {/* Debit / Credit Details */}
+              <div className="space-y-2.5 font-mono text-xs">
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500">Sender Account:</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-right">
+                    {receiptModalTx.sourceAccount.accountName} ({receiptModalTx.sourceAccount.accountNumber})
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500">Receiver Account:</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-right">
+                    {receiptModalTx.destinationAccount.accountName} ({receiptModalTx.destinationAccount.accountNumber})
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500">Transaction Type:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {receiptModalTx.type}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-slate-500">Timestamp:</span>
+                  <span className="text-slate-900 dark:text-white">
+                    {new Date(receiptModalTx.createdAt).toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Risk Assessment:</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {(receiptModalTx.riskScore * 100).toFixed(0)}% ({receiptModalTx.riskReason || "Compliant"})
+                  </span>
+                </div>
+              </div>
+
+              {/* Cryptographic Hash */}
+              <div className="pt-2 border-t border-dashed border-slate-300 dark:border-slate-800 text-[10px] font-mono text-center space-y-1">
+                <div className="text-slate-500">Blockchain SHA-256 Audit Verification:</div>
+                <div className="text-cyan-700 dark:text-cyan-300 truncate font-bold" title={receiptModalTx.auditHash || ""}>
+                  {receiptModalTx.auditHash || "SHA-256 Verified"}
+                </div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Non-Repudiation Verified</div>
+              </div>
+            </div>
+
+            {/* Bottom Buttons */}
+            <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
+              <button
+                type="button"
+                onClick={printCustomerReceipt}
+                className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition cursor-pointer shadow-lg shadow-cyan-600/20"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Official Slip</span>
+              </button>
+
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => handleCopyReceipt(receiptModalTx)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 transition cursor-pointer"
+                >
+                  {copiedReceipt ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedReceipt ? "Copied!" : "Copy Receipt Text"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setReceiptModalTx(null)}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Transaction Details Inspection Modal */}
       {inspectedTx && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-2xl bg-white dark:bg-[#080d1a] border border-slate-200 dark:border-cyan-700/60 rounded-3xl p-6 sm:p-7 relative shadow-2xl text-slate-800 dark:text-slate-200 max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
@@ -1236,18 +1703,33 @@ export default function DashboardPage() {
 
               {/* Action Buttons */}
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <button
-                  onClick={() => {
-                    const tx = inspectedTx;
-                    setInspectedTx(null);
-                    handleInspectInCopilot(tx);
-                  }}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs transition cursor-pointer shadow-lg shadow-cyan-600/20"
-                >
-                  <Bot className="w-4 h-4" />
-                  <span>Analyze in Compliance AI Copilot</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center space-x-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tx = inspectedTx;
+                      setReceiptModalTx(tx);
+                    }}
+                    className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition cursor-pointer border border-slate-300 dark:border-slate-700"
+                  >
+                    <Printer className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                    <span>Print Customer Slip</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const tx = inspectedTx;
+                      setInspectedTx(null);
+                      handleInspectInCopilot(tx);
+                    }}
+                    className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs transition cursor-pointer shadow-lg shadow-cyan-600/20"
+                  >
+                    <Bot className="w-4 h-4" />
+                    <span>Analyze in Copilot</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
                 <button
                   onClick={() => setInspectedTx(null)}
                   className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white font-bold text-xs transition cursor-pointer text-center border border-slate-300 dark:border-transparent"

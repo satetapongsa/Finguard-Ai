@@ -82,6 +82,7 @@ export interface TransactionWithAccounts {
   riskScore: number;
   riskReason: string | null;
   metadata: Record<string, unknown> | null;
+  auditHash?: string;
   createdAt: string;
   sourceAccount: {
     accountNumber: string;
