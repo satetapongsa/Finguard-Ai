@@ -257,28 +257,7 @@ export default function DashboardPage() {
           <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-purple-500 group-hover:translate-x-1 transition duration-200" />
         </Link>
 
-        {/* Link 3: AI Compliance Copilot */}
-        <Link
-          href="/compliance"
-          className="group p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 transition duration-200 flex items-center justify-between shadow-sm"
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
-              <Bot className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                AI Compliance Copilot
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                RAG regulatory queries
-              </div>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition duration-200" />
-        </Link>
-
-        {/* Link 4: Immutable Audit Trail */}
+        {/* Link 3: Immutable Audit Trail */}
         <Link
           href="/audit"
           className="group p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-200 dark:border-amber-800/80 hover:border-amber-400 dark:hover:border-amber-500 transition duration-200 flex items-center justify-between shadow-sm"
@@ -297,6 +276,27 @@ export default function DashboardPage() {
             </div>
           </div>
           <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 group-hover:translate-x-1 transition duration-200" />
+        </Link>
+
+        {/* Link 4: FinGuard AI */}
+        <Link
+          href="/compliance"
+          className="group p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 transition duration-200 flex items-center justify-between shadow-sm"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
+              <Bot className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                FinGuard AI
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                Sovereign compliance agent
+              </div>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition duration-200" />
         </Link>
       </div>
 

@@ -90,8 +90,8 @@ export default function Navigation() {
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Teller Desk", href: "/teller", icon: CreditCard },
     { label: "Reconciliation", href: "/reconciliation", icon: Scale },
-    { label: "AI Copilot", href: "/compliance", icon: Bot },
     { label: "Audit Trail", href: "/audit", icon: FileCheck },
+    { label: "FinGuard AI", href: "/compliance", icon: Bot },
   ];
 
   return (
