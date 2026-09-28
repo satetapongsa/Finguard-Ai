@@ -171,7 +171,7 @@ Select a transaction or regulatory policy on the left, or query below.`,
   };
 
   return (
-    <div className="h-[calc(100vh-9.5rem)] flex flex-col lg:flex-row gap-5 pb-4">
+    <div className="h-[calc(100vh-9.5rem)] flex flex-col lg:flex-row gap-5 pb-4" suppressHydrationWarning>
       {/* ========================================================================= */}
       {/* LEFT PANEL: DOCUMENT / TRANSACTION INSPECTOR                             */}
       {/* ========================================================================= */}

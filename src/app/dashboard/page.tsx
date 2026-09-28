@@ -252,7 +252,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12" suppressHydrationWarning>
       {/* Top Banner / Hero Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800/80">
         <div>
@@ -935,15 +935,20 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3" suppressHydrationWarning>
             {/* Search Input */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="relative" suppressHydrationWarning>
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search account, amount, txn..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                autoComplete="off"
+                data-protonpass-ignore="true"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                suppressHydrationWarning
                 className="bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-700/80 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-52 sm:w-64 transition"
               />
             </div>
@@ -996,13 +1001,13 @@ export default function DashboardPage() {
                     className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition duration-150 group cursor-pointer"
                   >
                     {/* Timestamp */}
-                    <td className="px-5 py-4 font-mono text-xs text-slate-500 dark:text-slate-400">
+                    <td className="px-5 py-4 font-mono text-xs text-slate-500 dark:text-slate-400" suppressHydrationWarning>
                       {new Date(tx.createdAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                         second: "2-digit",
                       })}
-                      <span className="block text-[10px] text-slate-400 dark:text-slate-500">
+                      <span className="block text-[10px] text-slate-400 dark:text-slate-500" suppressHydrationWarning>
                         {new Date(tx.createdAt).toLocaleDateString()}
                       </span>
                     </td>
