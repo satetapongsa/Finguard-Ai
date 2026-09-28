@@ -18,6 +18,7 @@ import { useComplianceStore } from "@/store/compliance-store";
 export default function CreateAccountModal() {
   const isOpen = useComplianceStore((s) => s.isCreateAccountOpen);
   const setIsOpen = useComplianceStore((s) => s.setCreateAccountOpen);
+  const setProcessingTransaction = useComplianceStore((s) => s.setProcessingTransaction);
 
   const generateRandomAuditId = () => {
     const entropy = Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -75,6 +76,7 @@ export default function CreateAccountModal() {
 
     setLoading(true);
     setResult(null);
+    setProcessingTransaction(true, "Registering ledger account in PostgreSQL database...");
 
     try {
       const res = await fetch("/api/accounts", {
@@ -119,6 +121,7 @@ export default function CreateAccountModal() {
       });
     } finally {
       setLoading(false);
+      setProcessingTransaction(false);
     }
   };
 

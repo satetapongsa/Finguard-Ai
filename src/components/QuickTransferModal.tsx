@@ -32,6 +32,7 @@ export default function QuickTransferModal() {
   const isOpen = useComplianceStore((s) => s.isQuickTransferOpen);
   const setIsOpen = useComplianceStore((s) => s.setQuickTransferOpen);
   const setCreateAccountOpen = useComplianceStore((s) => s.setCreateAccountOpen);
+  const setProcessingTransaction = useComplianceStore((s) => s.setProcessingTransaction);
 
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [sourceId, setSourceId] = useState("");
@@ -133,6 +134,7 @@ export default function QuickTransferModal() {
     if (isOverdraft) return;
     setLoading(true);
     setResult(null);
+    setProcessingTransaction(true, "Executing ACID Double-Entry transfer & hashing...");
 
     try {
       const res = await fetch("/api/transactions", {
@@ -175,6 +177,7 @@ export default function QuickTransferModal() {
       });
     } finally {
       setLoading(false);
+      setProcessingTransaction(false);
     }
   };
 

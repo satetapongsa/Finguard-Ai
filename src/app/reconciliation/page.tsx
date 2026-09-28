@@ -32,6 +32,7 @@ export default function ReconciliationPage() {
   const router = useRouter();
   const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
   const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
+  const setProcessingTransaction = useComplianceStore((s) => s.setProcessingTransaction);
   const cachedTransactions = useComplianceStore((s) => s.cachedTransactions);
   const setCachedTransactions = useComplianceStore((s) => s.setCachedTransactions);
 
@@ -74,6 +75,7 @@ export default function ReconciliationPage() {
 
   const handleQuickCreateSampleAccount = async () => {
     setIsGeneratingAccount(true);
+    setProcessingTransaction(true, "Provisioning new test ledger account...");
     const sampleNames = [
       "Bangkok Apex Logistics Ltd.",
       "Siam Horizon Trading Co.",
@@ -109,6 +111,7 @@ export default function ReconciliationPage() {
       console.error("Failed to create quick account:", err);
     } finally {
       setIsGeneratingAccount(false);
+      setProcessingTransaction(false);
     }
   };
 

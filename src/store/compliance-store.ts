@@ -32,6 +32,11 @@ interface ComplianceState {
   cachedTransactions: TransactionWithAccounts[];
   lastFetchedAt: number;
 
+  // Transaction In-Progress Loading Indicator
+  isProcessingTransaction: boolean;
+  processingMessage: string;
+  setProcessingTransaction: (isProcessing: boolean, message?: string) => void;
+
   setSelectedTransaction: (tx: TransactionWithAccounts | null) => void;
   setSelectedPolicy: (policy: CompliancePolicyItem | null) => void;
   setActiveFilter: (filter: string) => void;
@@ -52,6 +57,12 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
   isQuickTransferOpen: false,
   isCreateAccountOpen: false,
   activeTab: "transactions",
+
+  isProcessingTransaction: false,
+  processingMessage: "Settling ACID Ledger Transaction...",
+
+  setProcessingTransaction: (isProcessing, message = "Settling ACID Ledger Transaction...") =>
+    set({ isProcessingTransaction: isProcessing, processingMessage: message }),
 
   cachedStats: null,
   cachedAccounts: [],

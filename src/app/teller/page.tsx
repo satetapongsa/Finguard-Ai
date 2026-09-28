@@ -38,6 +38,7 @@ export default function TellerDeskPage() {
   const router = useRouter();
   const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
   const setCreateAccountOpen = useComplianceStore((s) => s.setCreateAccountOpen);
+  const setProcessingTransaction = useComplianceStore((s) => s.setProcessingTransaction);
   const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
   const cachedAccounts = useComplianceStore((s) => s.cachedAccounts);
   const setCachedAccounts = useComplianceStore((s) => s.setCachedAccounts);
@@ -119,6 +120,7 @@ export default function TellerDeskPage() {
   // Quick 1-Click Test Account Generator (Continuous / Unlimited creation)
   const handleQuickCreateSampleAccount = async () => {
     setIsGeneratingAccount(true);
+    setProcessingTransaction(true, "Provisioning new test ledger account...");
     const sampleNames = [
       "Bangkok Apex Logistics Ltd.",
       "Siam Horizon Trading Co.",
@@ -154,6 +156,7 @@ export default function TellerDeskPage() {
       console.error("Failed to generate test account:", err);
     } finally {
       setIsGeneratingAccount(false);
+      setProcessingTransaction(false);
     }
   };
 
@@ -248,6 +251,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
     if (!liveSourceId || !liveDestId || isLiveOverdraft || isExecutingLive) return;
     setIsExecutingLive(true);
     setLiveReceipt(null);
+    setProcessingTransaction(true, "Recording counter ledger transfer & verifying cryptographic hash...");
     try {
       const res = await fetch("/api/transactions", {
         method: "POST",
@@ -286,6 +290,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
       console.error("Live transfer error:", err);
     } finally {
       setIsExecutingLive(false);
+      setProcessingTransaction(false);
     }
   };
 

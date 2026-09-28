@@ -11,7 +11,6 @@ import {
   RefreshCw,
   ArrowUpRight,
   ExternalLink,
-  PlusCircle,
   FileCheck2,
   Lock,
   Zap,
@@ -21,7 +20,6 @@ import {
   ArrowRight,
   ShieldCheck,
   Bot,
-  UserPlus,
   BarChart3,
   PieChart,
   Activity,
@@ -44,8 +42,6 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
-  const setCreateAccountOpen = useComplianceStore((s) => s.setCreateAccountOpen);
   const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
   const cachedStats = useComplianceStore((s) => s.cachedStats);
   const cachedTransactions = useComplianceStore((s) => s.cachedTransactions);
@@ -185,23 +181,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Top Actions */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-          <button
-            onClick={() => setCreateAccountOpen(true)}
-            className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap"
-          >
-            <UserPlus className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-            <span>+ Create Account</span>
-          </button>
-
-          <button
-            onClick={() => setQuickTransferOpen(true)}
-            className="inline-flex items-center space-x-1.5 h-10 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25 transition cursor-pointer active:scale-95 whitespace-nowrap"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>+ Transfer Funds</span>
-          </button>
-
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={loadData}
             disabled={loading}
