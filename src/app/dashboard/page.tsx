@@ -33,6 +33,9 @@ import {
   Printer,
   Download,
   Eye,
+  EyeOff,
+  Activity,
+  Shield,
   CreditCard,
   Layers,
   HelpCircle,
@@ -60,6 +63,12 @@ export default function DashboardPage() {
   const [customerAccountSearch, setCustomerAccountSearch] = useState<string>("");
   const [receiptModalTx, setReceiptModalTx] = useState<TransactionWithAccounts | null>(null);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
+  const [maskPii, setMaskPii] = useState(true);
+
+  const formatAccNo = (num: string) => {
+    if (!maskPii || !num || num.length <= 4) return num;
+    return num.slice(0, 3) + "-****-" + num.slice(-4);
+  };
 
   const [accounts, setAccounts] = useState<
     {
@@ -169,7 +178,18 @@ export default function DashboardPage() {
     // Listen for live transaction commits from QuickTransferModal
     const handleTxUpdate = () => loadData();
     window.addEventListener("finguard_tx_updated", handleTxUpdate);
-    return () => window.removeEventListener("finguard_tx_updated", handleTxUpdate);
+
+    // Auto-refresh interval when page is active/visible
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadData();
+      }
+    }, 12000);
+
+    return () => {
+      window.removeEventListener("finguard_tx_updated", handleTxUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   const filteredTransactions = useMemo(() => {
@@ -372,6 +392,20 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
 
         {/* Clean, perfectly aligned Action Toolbar */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+          {/* PDPA PII Data Protection Toggle */}
+          <button
+            onClick={() => setMaskPii(!maskPii)}
+            className={`inline-flex items-center space-x-1.5 h-10 px-3 rounded-xl text-xs font-bold border transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap ${
+              maskPii
+                ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60 hover:bg-emerald-100"
+                : "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700/60 hover:bg-amber-100"
+            }`}
+            title="Toggle PDPA PII Data Protection Masking"
+          >
+            {maskPii ? <EyeOff className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
+            <span>{maskPii ? "PDPA Masked" : "Unmasked"}</span>
+          </button>
+
           <button
             onClick={() => setCreateAccountOpen(true)}
             className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap"
@@ -565,7 +599,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
               >
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
-                    {acc.accountName} ({acc.accountNumber}) - ฿{Number(acc.balance).toLocaleString()} [{acc.status}]
+                    {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()} [{acc.status}]
                   </option>
                 ))}
               </select>
@@ -674,7 +708,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                     {acc.accountName}
                   </div>
                   <div className="font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate mt-0.5">
-                    {acc.accountNumber}
+                    {formatAccNo(acc.accountNumber)}
                   </div>
                   <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-baseline justify-between">
                     <span className="text-[10px] text-slate-500">Balance:</span>
@@ -1189,7 +1223,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 <li>&bull; Cross-Border Wire (FATF Rec. 16)</li>
               </ul>
               <div className="text-[10px] text-rose-700 dark:text-rose-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-                🚨 Mandatory STR Filing Triggered
+                [ALERT] Mandatory STR Filing Triggered
               </div>
             </div>
 
@@ -1212,7 +1246,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 <li>&bull; Counterparty in AML Watchlist</li>
               </ul>
               <div className="text-[10px] text-purple-700 dark:text-purple-400 font-semibold pt-1 border-t border-slate-200 dark:border-slate-800">
-                🔍 Automated Sybil & Anomaly Guard
+                [VERIFIED] Automated Sybil & Anomaly Guard
               </div>
             </div>
           </div>
@@ -1332,7 +1366,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                         {tx.sourceAccount.accountName}
                       </div>
                       <div className="font-mono text-[11px] text-cyan-700 dark:text-cyan-400">
-                        {tx.sourceAccount.accountNumber}
+                        {formatAccNo(tx.sourceAccount.accountNumber)}
                       </div>
                     </td>
 
@@ -1342,7 +1376,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                         {tx.destinationAccount.accountName}
                       </div>
                       <div className="font-mono text-[11px] text-blue-700 dark:text-blue-400">
-                        {tx.destinationAccount.accountNumber}
+                        {formatAccNo(tx.destinationAccount.accountNumber)}
                       </div>
                     </td>
 
@@ -1496,14 +1530,14 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
                   <span className="text-slate-500">Sender Account:</span>
                   <span className="font-bold text-slate-900 dark:text-white text-right">
-                    {receiptModalTx.sourceAccount.accountName} ({receiptModalTx.sourceAccount.accountNumber})
+                    {receiptModalTx.sourceAccount.accountName} ({formatAccNo(receiptModalTx.sourceAccount.accountNumber)})
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between pb-1.5 border-b border-slate-200 dark:border-slate-800">
                   <span className="text-slate-500">Receiver Account:</span>
                   <span className="font-bold text-slate-900 dark:text-white text-right">
-                    {receiptModalTx.destinationAccount.accountName} ({receiptModalTx.destinationAccount.accountNumber})
+                    {receiptModalTx.destinationAccount.accountName} ({formatAccNo(receiptModalTx.destinationAccount.accountNumber)})
                   </span>
                 </div>
 
