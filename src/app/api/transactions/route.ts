@@ -10,14 +10,40 @@ import {
 } from "@/lib/security/guardrails";
 import { evaluateTransactionRisk } from "@/lib/risk/engine";
 
+let txCache: { key: string; data: any; count: number; expiresAt: number } | null = null;
+const TX_CACHE_TTL_MS = 2500;
+
+function invalidateTxCache() {
+  txCache = null;
+}
+
 /**
  * GET /api/transactions
- * Retrieve recent transactions for the real-time compliance ledger
+ * Retrieve recent transactions with micro-caching for instant page navigation
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
   const status = searchParams.get("status");
+  const cacheKey = `${limit}-${status || "ALL"}`;
+
+  const now = Date.now();
+  if (txCache && txCache.key === cacheKey && now < txCache.expiresAt) {
+    return NextResponse.json(
+      {
+        success: true,
+        count: txCache.count,
+        data: txCache.data,
+        cached: true,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-cache, stale-while-revalidate=5",
+          "X-FinGuard-Cache": "HIT",
+        },
+      }
+    );
+  }
 
   try {
     const whereClause: Prisma.TransactionWhereInput = {};
@@ -46,11 +72,27 @@ export async function GET(request: NextRequest) {
       updatedAt: t.updatedAt.toISOString(),
     }));
 
-    return NextResponse.json({
-      success: true,
-      count: serializedTransactions.length,
+    txCache = {
+      key: cacheKey,
       data: serializedTransactions,
-    });
+      count: serializedTransactions.length,
+      expiresAt: now + TX_CACHE_TTL_MS,
+    };
+
+    return NextResponse.json(
+      {
+        success: true,
+        count: serializedTransactions.length,
+        data: serializedTransactions,
+        cached: false,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-cache, stale-while-revalidate=5",
+          "X-FinGuard-Cache": "MISS",
+        },
+      }
+    );
   } catch (error) {
     console.error("Failed to query transactions from database:", error);
     return NextResponse.json(

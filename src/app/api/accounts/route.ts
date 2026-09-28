@@ -2,7 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 
+let accountsCache: { data: any; expiresAt: number } | null = null;
+const ACCOUNTS_CACHE_TTL_MS = 2500;
+
+function invalidateAccountsCache() {
+  accountsCache = null;
+}
+
 export async function GET() {
+  const now = Date.now();
+  if (accountsCache && now < accountsCache.expiresAt) {
+    return NextResponse.json(
+      { success: true, data: accountsCache.data, cached: true },
+      {
+        headers: {
+          "Cache-Control": "private, no-cache, stale-while-revalidate=5",
+          "X-FinGuard-Cache": "HIT",
+        },
+      }
+    );
+  }
+
   try {
     const accounts = await prisma.financialAccount.findMany({
       orderBy: { accountNumber: "asc" },
@@ -16,13 +36,22 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: accounts.map((acc) => ({
-        ...acc,
-        balance: acc.balance.toString(),
-      })),
-    });
+    const data = accounts.map((acc) => ({
+      ...acc,
+      balance: acc.balance.toString(),
+    }));
+
+    accountsCache = { data, expiresAt: now + ACCOUNTS_CACHE_TTL_MS };
+
+    return NextResponse.json(
+      { success: true, data, cached: false },
+      {
+        headers: {
+          "Cache-Control": "private, no-cache, stale-while-revalidate=5",
+          "X-FinGuard-Cache": "MISS",
+        },
+      }
+    );
   } catch (error) {
     console.error("Failed to fetch accounts from database:", error);
     return NextResponse.json(

@@ -28,10 +28,12 @@ export default function ReconciliationPage() {
   const router = useRouter();
   const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
   const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
+  const cachedTransactions = useComplianceStore((s) => s.cachedTransactions);
+  const setCachedTransactions = useComplianceStore((s) => s.setCachedTransactions);
 
   const [maskPii, setMaskPii] = useState(true);
-  const [transactions, setTransactions] = useState<TransactionWithAccounts[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<TransactionWithAccounts[]>(() => cachedTransactions || []);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [inspectedTx, setInspectedTx] = useState<TransactionWithAccounts | null>(null);
@@ -45,17 +47,15 @@ export default function ReconciliationPage() {
   };
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const res = await fetch("/api/transactions?limit=100");
       const data = await res.json();
       if (data.success && data.data) {
         setTransactions(data.data);
+        setCachedTransactions(data.data);
       }
     } catch (err) {
-      console.error("Error loading transactions:", err);
-    } finally {
-      setLoading(false);
+      console.error("Non-blocking transactions refresh:", err);
     }
   };
 

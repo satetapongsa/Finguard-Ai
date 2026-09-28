@@ -40,6 +40,8 @@ export default function TellerDeskPage() {
   const [customerAccountSearch, setCustomerAccountSearch] = useState<string>("");
   const [receiptModalTx, setReceiptModalTx] = useState<TransactionWithAccounts | null>(null);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
+  const cachedAccounts = useComplianceStore((s) => s.cachedAccounts);
+  const setCachedAccounts = useComplianceStore((s) => s.setCachedAccounts);
 
   const [accounts, setAccounts] = useState<
     {
@@ -50,11 +52,11 @@ export default function TellerDeskPage() {
       currency: string;
       status: string;
     }[]
-  >([]);
+  >(() => cachedAccounts || []);
 
   // Live Real-Time Transfer Studio States
-  const [liveSourceId, setLiveSourceId] = useState("");
-  const [liveDestId, setLiveDestId] = useState("");
+  const [liveSourceId, setLiveSourceId] = useState(() => (cachedAccounts && cachedAccounts.length >= 2 ? cachedAccounts[0].id : ""));
+  const [liveDestId, setLiveDestId] = useState(() => (cachedAccounts && cachedAccounts.length >= 2 ? cachedAccounts[1].id : ""));
   const [liveAmount, setLiveAmount] = useState("50000");
   const [liveType, setLiveType] = useState<"TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER">("TRANSFER");
   const [liveNote, setLiveNote] = useState("Customer counter cash settlement ID 1-1004-99882-12-9");
@@ -72,7 +74,7 @@ export default function TellerDeskPage() {
     createdAt: string;
   } | null>(null);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const formatAccNo = (num: string) => {
     if (!maskPii || !num || num.length <= 4) return num;
@@ -80,12 +82,12 @@ export default function TellerDeskPage() {
   };
 
   const loadData = async () => {
-    setLoading(true);
     try {
       const res = await fetch("/api/accounts");
       const data = await res.json();
       if (data.success && data.data) {
         setAccounts(data.data);
+        setCachedAccounts(data.data);
         if (data.data.length >= 2) {
           setLiveSourceId((prev) => prev || data.data[0].id);
           setLiveDestId((prev) => prev || data.data[1].id);
@@ -93,9 +95,7 @@ export default function TellerDeskPage() {
         }
       }
     } catch (err) {
-      console.error("Error loading accounts:", err);
-    } finally {
-      setLoading(false);
+      console.error("Non-blocking accounts refresh:", err);
     }
   };
 
