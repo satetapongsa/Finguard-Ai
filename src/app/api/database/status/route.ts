@@ -7,14 +7,18 @@ export async function GET() {
 
   const startTime = Date.now();
   try {
-    // Quick probe to check if database is online
-    const [accountCount, txCount, auditCount] = await Promise.all([
-      prisma.financialAccount.count(),
-      prisma.transaction.count(),
-      prisma.auditLog.count(),
-    ]);
+    // Ultra-fast single round-trip ping & table counts
+    const counts = await prisma.$queryRaw<
+      { accounts: bigint | number; transactions: bigint | number; audits: bigint | number }[]
+    >`
+      SELECT 
+        (SELECT COUNT("id") FROM "FinancialAccount") AS accounts,
+        (SELECT COUNT("id") FROM "Transaction") AS transactions,
+        (SELECT COUNT("id") FROM "AuditLog") AS audits
+    `;
 
     const latencyMs = Date.now() - startTime;
+    const c = counts[0] || { accounts: 0, transactions: 0, audits: 0 };
 
     return NextResponse.json({
       success: true,
@@ -22,9 +26,9 @@ export async function GET() {
       provider: isNeon ? "Neon Serverless PostgreSQL (pgvector)" : "PostgreSQL Database",
       latencyMs,
       stats: {
-        accounts: accountCount,
-        transactions: txCount,
-        auditLogs: auditCount,
+        accounts: Number(c.accounts),
+        transactions: Number(c.transactions),
+        auditLogs: Number(c.audits),
       },
       message: isNeon
         ? "Connected directly to Neon PostgreSQL with active connection pooler"

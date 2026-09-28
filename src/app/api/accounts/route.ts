@@ -9,9 +9,12 @@ function invalidateAccountsCache() {
   accountsCache = null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const bypassCache = searchParams.has("_t");
+
   const now = Date.now();
-  if (accountsCache && now < accountsCache.expiresAt) {
+  if (!bypassCache && accountsCache && now < accountsCache.expiresAt) {
     return NextResponse.json(
       { success: true, data: accountsCache.data, cached: true },
       {

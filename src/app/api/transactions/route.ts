@@ -25,10 +25,11 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "50", 10)));
   const status = searchParams.get("status");
+  const bypassCache = searchParams.has("_t");
   const cacheKey = `${limit}-${status || "ALL"}`;
 
   const now = Date.now();
-  if (txCache && txCache.key === cacheKey && now < txCache.expiresAt) {
+  if (!bypassCache && txCache && txCache.key === cacheKey && now < txCache.expiresAt) {
     return NextResponse.json(
       {
         success: true,
@@ -360,6 +361,8 @@ export async function POST(request: NextRequest) {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
       }
     );
+
+    invalidateTxCache();
 
     return NextResponse.json(
       {

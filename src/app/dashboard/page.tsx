@@ -70,16 +70,15 @@ export default function DashboardPage() {
   const loadData = async (isManual = false) => {
     if (isManual) setLoading(true);
     try {
-      const [statsRes, txRes, dbRes] = await Promise.all([
+      // 1. Fetch critical dashboard metrics and transactions in parallel
+      const [statsRes, txRes] = await Promise.all([
         fetch("/api/stats"),
         fetch("/api/transactions?limit=50"),
-        fetch("/api/database/status"),
       ]);
 
-      const [statsData, txData, dbData] = await Promise.all([
+      const [statsData, txData] = await Promise.all([
         statsRes.json(),
         txRes.json(),
-        dbRes.json(),
       ]);
 
       if (statsData.success && statsData.data) {
@@ -90,14 +89,21 @@ export default function DashboardPage() {
         setTransactions(txData.data);
         setCachedTransactions(txData.data);
       }
-      if (dbData.success) {
-        setDbStatus({
-          connected: dbData.connected,
-          provider: dbData.provider,
-          isNeon: dbData.provider?.includes("Neon"),
-          latencyMs: dbData.latencyMs,
-        });
-      }
+
+      // 2. Fetch database status independently in background so it never blocks UI rendering
+      fetch("/api/database/status")
+        .then((r) => r.json())
+        .then((dbData) => {
+          if (dbData.success) {
+            setDbStatus({
+              connected: dbData.connected,
+              provider: dbData.provider,
+              isNeon: dbData.provider?.includes("Neon"),
+              latencyMs: dbData.latencyMs,
+            });
+          }
+        })
+        .catch(() => {});
     } catch (err) {
       console.error("Non-blocking dashboard refresh:", err);
     } finally {

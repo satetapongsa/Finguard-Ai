@@ -10,9 +10,12 @@ const CACHE_TTL_MS = 2500; // 2.5 seconds micro-cache
  * GET /api/stats
  * Aggregate metrics for Executive Dashboard KPIs with microsecond in-memory caching
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const bypassCache = searchParams.has("_t");
+
   const now = Date.now();
-  if (statsCache && now < statsCache.expiresAt) {
+  if (!bypassCache && statsCache && now < statsCache.expiresAt) {
     return NextResponse.json(
       { success: true, data: statsCache.data, cached: true },
       {
@@ -25,45 +28,55 @@ export async function GET() {
   }
 
   try {
-    const [totalTransactions, flaggedCount, accounts, policiesCount, recentTx] =
-      await Promise.all([
-        prisma.transaction.aggregate({
-          _sum: { amount: true },
-          _count: { id: true },
-        }),
-        prisma.transaction.count({
-          where: { status: "FLAGGED" },
-        }),
-        prisma.financialAccount.findMany({
-          select: { balance: true, status: true },
-        }),
-        prisma.compliancePolicy.count({
-          where: { isActive: true },
-        }),
-        prisma.transaction.findMany({
-          take: 10,
-          orderBy: { createdAt: "desc" },
-          include: {
-            sourceAccount: { select: { accountNumber: true, accountName: true } },
-            destinationAccount: { select: { accountNumber: true, accountName: true } },
-          },
-        }),
-      ]);
+    // Ultra-fast single SQL aggregation query directly executed in PostgreSQL engine
+    const [summaryResult, recentTx] = await Promise.all([
+      prisma.$queryRaw<
+        {
+          total_volume: number | null;
+          tx_count: bigint | number;
+          total_balance: number | null;
+          flagged_count: bigint | number;
+          policies_count: bigint | number;
+        }[]
+      >`
+        SELECT 
+          (SELECT COALESCE(SUM("amount"), 0) FROM "Transaction") AS total_volume,
+          (SELECT COUNT("id") FROM "Transaction") AS tx_count,
+          (SELECT COALESCE(SUM("balance"), 0) FROM "FinancialAccount") AS total_balance,
+          (SELECT COUNT("id") FROM "Transaction" WHERE "status" = 'FLAGGED') AS flagged_count,
+          (SELECT COUNT("id") FROM "CompliancePolicy" WHERE "isActive" = true) AS policies_count
+      `,
+      prisma.transaction.findMany({
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          amount: true,
+          currency: true,
+          status: true,
+          riskScore: true,
+          riskReason: true,
+          createdAt: true,
+          sourceAccount: { select: { accountNumber: true, accountName: true } },
+          destinationAccount: { select: { accountNumber: true, accountName: true } },
+        },
+      }),
+    ]);
 
-    const totalBalance = accounts.reduce((acc, curr) => {
-      return acc + parseFloat(curr.balance.toString());
-    }, 0);
-
-    const totalVolume = totalTransactions._sum.amount
-      ? parseFloat(totalTransactions._sum.amount.toString())
-      : 0;
+    const row = summaryResult[0] || {
+      total_volume: 0,
+      tx_count: 0,
+      total_balance: 0,
+      flagged_count: 0,
+      policies_count: 0,
+    };
 
     const data = {
-      totalVolume,
-      transactionCount: totalTransactions._count.id,
-      verifiedLedgerBalance: totalBalance,
-      highRiskFlags: flaggedCount,
-      activeComplianceAlerts: policiesCount,
+      totalVolume: Number(row.total_volume || 0),
+      transactionCount: Number(row.tx_count || 0),
+      verifiedLedgerBalance: Number(row.total_balance || 0),
+      highRiskFlags: Number(row.flagged_count || 0),
+      activeComplianceAlerts: Number(row.policies_count || 0),
       recentTransactions: recentTx.map((t) => ({
         ...t,
         amount: t.amount.toString(),
