@@ -15,6 +15,9 @@ import {
   ArrowRight,
   BadgeAlert,
   SlidersHorizontal,
+  KeyRound,
+  ShieldCheck,
+  X,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import { CompliancePolicyItem } from "@/lib/types";
@@ -34,13 +37,19 @@ export default function ComplianceCopilotPage() {
   const [selectedPolicy, setSelectedPolicy] = useState<CompliancePolicyItem | null>(null);
   const [policyCategory, setPolicyCategory] = useState("ALL");
 
+  // DeepSeek AI State
+  const [deepSeekKey, setDeepSeekKey] = useState<string>("");
+  const [tempDeepSeekKey, setTempDeepSeekKey] = useState<string>("");
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [serverDeepSeekConfigured, setServerDeepSeekConfigured] = useState(false);
+
   // Chat State
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome-1",
       role: "assistant",
       content: `### FinGuard AI Sovereign Compliance Copilot
-I am your autonomous regulatory intelligence agent. I continuously cross-reference transactions and inquiries against **Bank of Thailand (BOT)**, **Anti-Money Laundering Office (AMLO)**, and **PDPA B.E. 2562** legal directives.
+I am your autonomous regulatory intelligence agent powered by **DeepSeek AI** (deepseek-chat / deepseek-reasoner). I continuously cross-reference transactions and inquiries against **Bank of Thailand (BOT)**, **Anti-Money Laundering Office (AMLO)**, and **PDPA B.E. 2562** legal directives.
 
 Select a transaction or regulatory policy on the left, or query below.`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -52,8 +61,25 @@ Select a transaction or regulatory policy on the left, or query below.`,
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load Policies
+  // Load Policies and check DeepSeek AI configuration
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem("finguard_deepseek_key");
+      if (saved) {
+        setDeepSeekKey(saved);
+        setTempDeepSeekKey(saved);
+      }
+    } catch (_) {}
+
+    fetch("/api/compliance/analyze")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.deepseek?.isConfigured) {
+          setServerDeepSeekConfigured(true);
+        }
+      })
+      .catch(() => {});
+
     fetch("/api/policies")
       .then((res) => res.json())
       .then((data) => {
@@ -64,6 +90,15 @@ Select a transaction or regulatory policy on the left, or query below.`,
       })
       .catch((err) => console.error("Could not load policies:", err));
   }, []);
+
+  const handleSaveDeepSeekKey = () => {
+    const trimmed = tempDeepSeekKey.trim();
+    setDeepSeekKey(trimmed);
+    try {
+      localStorage.setItem("finguard_deepseek_key", trimmed);
+    } catch (_) {}
+    setIsKeyModalOpen(false);
+  };
 
   // Auto scroll messages
   useEffect(() => {
@@ -99,7 +134,10 @@ Select a transaction or regulatory policy on the left, or query below.`,
     try {
       const response = await fetch("/api/compliance/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(deepSeekKey.trim() ? { "x-deepseek-api-key": deepSeekKey.trim() } : {}),
+        },
         body: JSON.stringify({
           query: promptToSend,
           transactionId: selectedTransaction?.id,
@@ -403,17 +441,33 @@ Select a transaction or regulatory policy on the left, or query below.`,
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="font-extrabold text-slate-900 dark:text-white text-sm tracking-tight">FinGuard Regulatory RAG Copilot</h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/40">
-                  Online
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono border ${
+                  serverDeepSeekConfigured || deepSeekKey.trim().length > 0
+                    ? "bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700/60"
+                    : "bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700/60"
+                }`}>
+                  {serverDeepSeekConfigured || deepSeekKey.trim().length > 0
+                    ? "DeepSeek-V3 Engine Active"
+                    : "DeepSeek Standby (Ready for Key)"}
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                Live inference against BOT, AMLO & PDPA Vector Knowledge Base
+                Live inference against BOT, AMLO &amp; PDPA Vector Knowledge Base
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsKeyModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/80 text-purple-700 dark:text-purple-300 text-xs font-bold border border-purple-200 dark:border-purple-800 transition cursor-pointer"
+              title="Configure DeepSeek API Key"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>DeepSeek Key</span>
+            </button>
+
             <button
               onClick={() =>
                 setMessages([
@@ -565,6 +619,99 @@ Select a transaction or regulatory policy on the left, or query below.`,
           </form>
         </div>
       </div>
+
+      {/* DeepSeek API Key Configuration Modal */}
+      {isKeyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white dark:bg-[#070e1e] border border-purple-500/40 rounded-3xl p-6 relative shadow-2xl text-slate-800 dark:text-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base">
+                    DeepSeek AI Backend
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Configure your DeepSeek API Key
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsKeyModalOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3.5 text-xs">
+              <div className="p-3.5 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 text-purple-950 dark:text-purple-200 space-y-1">
+                <div className="font-bold flex items-center space-x-1.5">
+                  <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span>DeepSeek-V3 / DeepSeek-R1 Ready</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-purple-900 dark:text-purple-300">
+                  You can set <code className="font-mono font-bold bg-white dark:bg-slate-900 px-1 py-0.5 rounded">DEEPSEEK_API_KEY</code> in your <code className="font-mono">.env</code> file, or paste your API key below for instant live activation.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  DeepSeek API Key (sk-...)
+                </label>
+                <input
+                  type="password"
+                  value={tempDeepSeekKey}
+                  onChange={(e) => setTempDeepSeekKey(e.target.value)}
+                  placeholder="sk-..."
+                  className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-purple-500 transition"
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span>Model: deepseek-chat</span>
+                <span>Base: api.deepseek.com</span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                {deepSeekKey && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeepSeekKey("");
+                      setTempDeepSeekKey("");
+                      try {
+                        localStorage.removeItem("finguard_deepseek_key");
+                      } catch (_) {}
+                      setIsKeyModalOpen(false);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition cursor-pointer"
+                  >
+                    Clear Key
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsKeyModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveDeepSeekKey}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 shadow-md shadow-purple-600/30 transition cursor-pointer"
+                >
+                  Save &amp; Activate DeepSeek
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

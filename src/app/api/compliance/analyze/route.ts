@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { google } from "@ai-sdk/google";
-import { openai } from "@ai-sdk/openai";
+import { openai, createOpenAI } from "@ai-sdk/openai";
 import prisma from "@/lib/prisma";
 import { ComplianceAnalyzeSchema } from "@/lib/types";
 import { sanitizeText } from "@/lib/security/guardrails";
@@ -9,9 +9,40 @@ import { searchPolicies } from "@/lib/rag/vector-store";
 
 /**
  * Autonomous Financial Document Compliance RAG Engine
- * Retrieves policies from CompliancePolicy (pgvector or semantic match)
- * and streams LLM response with regulatory citations.
+ * Supports DeepSeek AI (Primary Backend), Google Gemini, OpenAI,
+ * and Autonomous Local Vector Knowledge Engine.
  */
+export async function GET(request: NextRequest) {
+  const headerDeepSeekKey = request.headers.get("x-deepseek-api-key")?.trim();
+  const effectiveDeepSeekKey =
+    (headerDeepSeekKey && headerDeepSeekKey.length > 0 ? headerDeepSeekKey : process.env.DEEPSEEK_API_KEY)?.trim();
+
+  const hasDeepSeekKey =
+    Boolean(effectiveDeepSeekKey) &&
+    effectiveDeepSeekKey !== "demo-key" &&
+    effectiveDeepSeekKey !== "your-deepseek-api-key-here" &&
+    effectiveDeepSeekKey!.length > 0;
+
+  return NextResponse.json({
+    activeProvider: hasDeepSeekKey ? "deepseek" : "autonomous-rag",
+    deepseek: {
+      isConfigured: hasDeepSeekKey,
+      model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+      baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
+    },
+    google: {
+      isConfigured:
+        Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY) &&
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY !== "your-google-ai-api-key-here",
+    },
+    openai: {
+      isConfigured:
+        Boolean(process.env.OPENAI_API_KEY) &&
+        process.env.OPENAI_API_KEY !== "your-openai-api-key-here",
+    },
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.json();
@@ -73,6 +104,7 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = `
 You are FinGuard AI, an Autonomous Financial Compliance & Transaction Intelligence Agent engineered for Tier-1 Banks and BFSI Institutions.
+Your underlying reasoning and compliance intelligence is powered by DeepSeek AI (deepseek-chat / deepseek-reasoner).
 
 Your duties:
 1. Provide accurate, professional, audit-ready regulatory guidance adhering to Bank of Thailand (BOT), Anti-Money Laundering Office (AMLO), and PDPA regulations.
@@ -97,11 +129,46 @@ ${contextData ? `Additional Metadata Context: ${JSON.stringify(contextData)}` : 
 `;
 
     // 4. Stream response via Vercel AI SDK
+    // Priority: DeepSeek (Primary Backend) -> Google Gemini -> OpenAI -> Autonomous Local RAG
+    const headerDeepSeekKey = request.headers.get("x-deepseek-api-key")?.trim();
+    const effectiveDeepSeekKey =
+      (headerDeepSeekKey && headerDeepSeekKey.length > 0 ? headerDeepSeekKey : process.env.DEEPSEEK_API_KEY)?.trim();
+
+    const hasDeepSeekKey =
+      Boolean(effectiveDeepSeekKey) &&
+      effectiveDeepSeekKey !== "demo-key" &&
+      effectiveDeepSeekKey !== "your-deepseek-api-key-here" &&
+      effectiveDeepSeekKey!.length > 0;
+
     const hasGoogleKey =
       Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY) &&
-      process.env.GOOGLE_GENERATIVE_AI_API_KEY !== "demo-key";
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY !== "demo-key" &&
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY !== "your-google-ai-api-key-here";
+
     const hasOpenAIKey =
-      Boolean(process.env.OPENAI_API_KEY) && process.env.OPENAI_API_KEY !== "demo-key";
+      Boolean(process.env.OPENAI_API_KEY) &&
+      process.env.OPENAI_API_KEY !== "demo-key" &&
+      process.env.OPENAI_API_KEY !== "your-openai-api-key-here";
+
+    if (hasDeepSeekKey) {
+      const deepseekClient = createOpenAI({
+        baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
+        apiKey: effectiveDeepSeekKey!,
+      });
+      const modelName = process.env.DEEPSEEK_MODEL || "deepseek-chat";
+      const result = streamText({
+        model: deepseekClient(modelName),
+        system: systemPrompt,
+        prompt: sanitizedQuery,
+        temperature: 0.2,
+      });
+      return result.toDataStreamResponse({
+        headers: {
+          "X-FinGuard-LLM-Provider": "deepseek",
+          "X-FinGuard-LLM-Model": modelName,
+        },
+      });
+    }
 
     if (hasGoogleKey) {
       const result = streamText({
@@ -109,7 +176,12 @@ ${contextData ? `Additional Metadata Context: ${JSON.stringify(contextData)}` : 
         system: systemPrompt,
         prompt: sanitizedQuery,
       });
-      return result.toDataStreamResponse();
+      return result.toDataStreamResponse({
+        headers: {
+          "X-FinGuard-LLM-Provider": "google",
+          "X-FinGuard-LLM-Model": "gemini-1.5-flash",
+        },
+      });
     }
 
     if (hasOpenAIKey) {
@@ -118,7 +190,12 @@ ${contextData ? `Additional Metadata Context: ${JSON.stringify(contextData)}` : 
         system: systemPrompt,
         prompt: sanitizedQuery,
       });
-      return result.toDataStreamResponse();
+      return result.toDataStreamResponse({
+        headers: {
+          "X-FinGuard-LLM-Provider": "openai",
+          "X-FinGuard-LLM-Model": "gpt-4o-mini",
+        },
+      });
     }
 
     // Autonomous Direct Regulatory Analysis Engine using active Neon PostgreSQL policies
