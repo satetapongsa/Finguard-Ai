@@ -176,7 +176,11 @@ export default function AuditExplorerPage() {
             <span>Total Recorded Events</span>
             <Database className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
           </div>
-          <p className="text-3xl font-mono font-extrabold text-slate-900 dark:text-white mt-3">{logs.length}</p>
+          {loading ? (
+            <div className="h-9 w-20 bg-slate-200 dark:bg-slate-800 rounded animate-pulse mt-3" />
+          ) : (
+            <p className="text-3xl font-mono font-extrabold text-slate-900 dark:text-white mt-3">{logs.length}</p>
+          )}
           <span className="text-xs text-slate-600 dark:text-slate-400 mt-1 block">Append-only sequential event records</span>
         </div>
 
@@ -185,9 +189,13 @@ export default function AuditExplorerPage() {
             <span>Blockchain Links Verified</span>
             <LinkIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <p className="text-3xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 mt-3">
-            {logs.filter((l) => l.isIntegrityVerified).length}
-          </p>
+          {loading ? (
+            <div className="h-9 w-20 bg-slate-200 dark:bg-slate-800 rounded animate-pulse mt-3" />
+          ) : (
+            <p className="text-3xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 mt-3">
+              {logs.filter((l) => l.isIntegrityVerified).length}
+            </p>
+          )}
           <span className="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1 block">SHA-256 Parent Chaining Verified</span>
         </div>
 
@@ -196,9 +204,13 @@ export default function AuditExplorerPage() {
             <span>Alert & Blocked Interceptions</span>
             <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
           </div>
-          <p className="text-3xl font-mono font-extrabold text-rose-600 dark:text-rose-400 mt-3">
-            {logs.filter((l) => l.status === "ALERT" || l.status === "BLOCKED").length}
-          </p>
+          {loading ? (
+            <div className="h-9 w-20 bg-slate-200 dark:bg-slate-800 rounded animate-pulse mt-3" />
+          ) : (
+            <p className="text-3xl font-mono font-extrabold text-rose-600 dark:text-rose-400 mt-3">
+              {logs.filter((l) => l.status === "ALERT" || l.status === "BLOCKED").length}
+            </p>
+          )}
           <span className="text-xs text-rose-600 dark:text-rose-400/80 mt-1 block">Compliance interventions recorded</span>
         </div>
       </div>
@@ -259,7 +271,19 @@ export default function AuditExplorerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
-              {filteredLogs.length === 0 ? (
+              {loading ? (
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="px-5 py-4"><div className="h-4 w-28 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-28 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-36 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    <td className="px-5 py-4 text-center"><div className="h-5 w-16 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto" /></td>
+                    <td className="px-5 py-4 text-right"><div className="h-7 w-14 bg-slate-200 dark:bg-slate-800 rounded-xl ml-auto" /></td>
+                  </tr>
+                ))
+              ) : filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-16 text-slate-500 font-medium">
                     No audit records found matching criteria.

@@ -34,6 +34,7 @@ export default function ComplianceCopilotPage() {
 
   const [activeTab, setActiveTab] = useState<"transaction" | "policies">("transaction");
   const [policies, setPolicies] = useState<CompliancePolicyItem[]>([]);
+  const [policiesLoading, setPoliciesLoading] = useState(true);
   const [selectedPolicy, setSelectedPolicy] = useState<CompliancePolicyItem | null>(null);
   const [policyCategory, setPolicyCategory] = useState("ALL");
 
@@ -88,7 +89,8 @@ Select a transaction or regulatory policy on the left, or query below.`,
           if (data.data.length > 0) setSelectedPolicy(data.data[0]);
         }
       })
-      .catch((err) => console.error("Could not load policies:", err));
+      .catch((err) => console.error("Could not load policies:", err))
+      .finally(() => setPoliciesLoading(false));
   }, []);
 
   const handleSaveDeepSeekKey = () => {
@@ -381,7 +383,19 @@ Select a transaction or regulatory policy on the left, or query below.`,
                 ))}
               </div>
 
-              {policies
+              {policiesLoading ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/40 animate-pulse space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded" />
+                      <div className="h-3.5 w-12 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                    </div>
+                    <div className="h-4 w-44 bg-slate-200 dark:bg-slate-800 rounded" />
+                    <div className="h-3 w-full bg-slate-100 dark:bg-slate-800/60 rounded" />
+                    <div className="h-3 w-3/4 bg-slate-100 dark:bg-slate-800/60 rounded" />
+                  </div>
+                ))
+              ) : policies
                 .filter((p) => policyCategory === "ALL" || p.category === policyCategory)
                 .map((pol) => {
                   const isSelected = selectedPolicy?.id === pol.id;

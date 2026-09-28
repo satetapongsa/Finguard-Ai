@@ -37,8 +37,8 @@ export default function ReconciliationPage() {
   const setCachedTransactions = useComplianceStore((s) => s.setCachedTransactions);
 
   const [maskPii, setMaskPii] = useState(true);
-  const [transactions, setTransactions] = useState<TransactionWithAccounts[]>(() => cachedTransactions || []);
-  const [loading, setLoading] = useState(false);
+  const [transactions, setTransactions] = useState<TransactionWithAccounts[] | null>(() => cachedTransactions.length > 0 ? cachedTransactions : null);
+  const [loading, setLoading] = useState(() => cachedTransactions.length === 0);
   const [isGeneratingAccount, setIsGeneratingAccount] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -53,7 +53,8 @@ export default function ReconciliationPage() {
     return num.slice(0, 3) + "-****-" + num.slice(-4);
   };
 
-  const loadData = async () => {
+  const loadData = async (isManual = false) => {
+    if (isManual) setLoading(true);
     try {
       const res = await fetch("/api/transactions?limit=100");
       const data = await res.json();
@@ -63,6 +64,8 @@ export default function ReconciliationPage() {
       }
     } catch (err) {
       console.error("Non-blocking transactions refresh:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,6 +119,7 @@ export default function ReconciliationPage() {
   };
 
   const filteredTransactions = useMemo(() => {
+    if (!transactions) return [];
     return transactions.filter((tx) => {
       let matchesFilter = true;
       if (statusFilter === "HIGH_VALUE") {
@@ -220,6 +224,7 @@ Blockchain Seal : ${tx.auditHash}
   }, [filteredTransactions]);
 
   const blockedMismatchCount = useMemo(() => {
+    if (!transactions) return 0;
     return transactions.filter((t) => (t.metadata as any)?.isCryptographicMatch === false).length;
   }, [transactions]);
 
@@ -274,7 +279,7 @@ Blockchain Seal : ${tx.auditHash}
           </button>
 
           <button
-            onClick={loadData}
+            onClick={() => loadData(true)}
             disabled={loading}
             className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm transition cursor-pointer whitespace-nowrap"
           >
@@ -290,7 +295,11 @@ Blockchain Seal : ${tx.auditHash}
           <div>
             <div className="text-[11px] font-bold text-slate-500 uppercase">Filtered Records</div>
             <div className="text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5">
-              {filteredTransactions.length} Transactions
+              {loading || !transactions ? (
+                <div className="h-6 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse mt-1" />
+              ) : (
+                `${filteredTransactions.length} Transactions`
+              )}
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-400">
@@ -302,7 +311,11 @@ Blockchain Seal : ${tx.auditHash}
           <div>
             <div className="text-[11px] font-bold text-slate-500 uppercase">Cumulative Volume</div>
             <div className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-              ฿{totalFilteredVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {loading || !transactions ? (
+                <div className="h-6 w-28 bg-slate-200 dark:bg-slate-800 rounded animate-pulse mt-1" />
+              ) : (
+                `฿${totalFilteredVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+              )}
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
@@ -314,7 +327,11 @@ Blockchain Seal : ${tx.auditHash}
           <div>
             <div className="text-[11px] font-bold text-slate-500 uppercase">ACID Ledger Invariant</div>
             <div className="text-xl font-black font-mono text-cyan-700 dark:text-cyan-300 mt-0.5">
-              100% Balanced
+              {loading || !transactions ? (
+                <div className="h-6 w-28 bg-slate-200 dark:bg-slate-800 rounded animate-pulse mt-1" />
+              ) : (
+                "100% Balanced"
+              )}
             </div>
           </div>
           <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400">
@@ -330,7 +347,11 @@ Blockchain Seal : ${tx.auditHash}
             <div className={`text-xl font-black font-mono mt-0.5 ${
               blockedMismatchCount > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-white"
             }`}>
-              {blockedMismatchCount} Blocked
+              {loading || !transactions ? (
+                <div className="h-6 w-20 bg-slate-200 dark:bg-slate-800 rounded animate-pulse mt-1" />
+              ) : (
+                `${blockedMismatchCount} Blocked`
+              )}
             </div>
           </div>
           <div className={`p-2.5 rounded-xl ${
@@ -410,7 +431,19 @@ Blockchain Seal : ${tx.auditHash}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
-              {filteredTransactions.length === 0 ? (
+              {loading || !transactions ? (
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="px-5 py-4"><div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded mb-1" /><div className="h-3 w-20 bg-slate-100 dark:bg-slate-800/60 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded mb-1" /><div className="h-3 w-20 bg-slate-100 dark:bg-slate-800/60 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    <td className="px-5 py-4"><div className="h-4 w-16 bg-slate-200 dark:bg-slate-800 rounded" /></td>
+                    <td className="px-5 py-4 text-center"><div className="h-5 w-24 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto" /></td>
+                    <td className="px-5 py-4 text-right"><div className="h-7 w-16 bg-slate-200 dark:bg-slate-800 rounded-xl ml-auto" /></td>
+                  </tr>
+                ))
+              ) : filteredTransactions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-16 text-slate-500 font-medium">
                     No transactions found matching the filter criteria.

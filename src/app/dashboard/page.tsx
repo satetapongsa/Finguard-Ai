@@ -48,16 +48,9 @@ export default function DashboardPage() {
   const setCachedStats = useComplianceStore((s) => s.setCachedStats);
   const setCachedTransactions = useComplianceStore((s) => s.setCachedTransactions);
 
-  const [stats, setStats] = useState<DashboardStats>(() => cachedStats || {
-    totalVolume: 0,
-    transactionCount: 0,
-    verifiedLedgerBalance: 0,
-    highRiskFlags: 0,
-    activeComplianceAlerts: 0,
-  });
-
-  const [transactions, setTransactions] = useState<TransactionWithAccounts[]>(() => cachedTransactions || []);
-  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<DashboardStats | null>(() => cachedStats);
+  const [transactions, setTransactions] = useState<TransactionWithAccounts[] | null>(() => cachedTransactions.length > 0 ? cachedTransactions : null);
+  const [loading, setLoading] = useState(() => !cachedStats);
   const [timeRange, setTimeRange] = useState<"24H" | "7D" | "30D">("24H");
   const [activeChartTab, setActiveChartTab] = useState<"VOLUME" | "RISK">("VOLUME");
 
@@ -73,7 +66,8 @@ export default function DashboardPage() {
     latencyMs: 18,
   });
 
-  const loadData = async () => {
+  const loadData = async (isManual = false) => {
+    if (isManual) setLoading(true);
     try {
       const [statsRes, txRes, dbRes] = await Promise.all([
         fetch("/api/stats"),
@@ -105,6 +99,8 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Non-blocking dashboard refresh:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -132,25 +128,26 @@ export default function DashboardPage() {
     let medium = 0;
     let high = 0;
 
-    transactions.forEach((tx) => {
+    const list = transactions || [];
+    list.forEach((tx) => {
       if (tx.riskScore >= 0.65) high++;
       else if (tx.riskScore >= 0.35) medium++;
       else low++;
     });
 
-    const total = Math.max(1, transactions.length);
+    const total = Math.max(1, list.length);
     return {
       low: { count: low, percentage: ((low / total) * 100).toFixed(1) },
       medium: { count: medium, percentage: ((medium / total) * 100).toFixed(1) },
       high: { count: high, percentage: ((high / total) * 100).toFixed(1) },
-      total: transactions.length,
+      total: list.length,
     };
   }, [transactions]);
 
   // Volume Trend Chart Data Generator
   const volumeChartPoints = useMemo(() => {
     const hours = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"];
-    const baseVal = stats.totalVolume > 0 ? stats.totalVolume / 6 : 50000;
+    const baseVal = stats && stats.totalVolume > 0 ? stats.totalVolume / 6 : 50000;
     
     return hours.map((hour, idx) => {
       const multiplier = [0.4, 0.25, 0.75, 1.1, 0.95, 0.85, 1.0][idx];
@@ -158,7 +155,7 @@ export default function DashboardPage() {
       const riskLevel = [10, 5, 25, 45, 60, 30, 20][idx];
       return { hour, volume, riskLevel };
     });
-  }, [stats.totalVolume]);
+  }, [stats?.totalVolume]);
 
   const maxChartVolume = Math.max(...volumeChartPoints.map((p) => p.volume), 100000);
 
@@ -183,7 +180,7 @@ export default function DashboardPage() {
         {/* Top Actions */}
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={loadData}
+            onClick={() => loadData(true)}
             disabled={loading}
             className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm transition cursor-pointer whitespace-nowrap"
           >
@@ -294,15 +291,24 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
-              ฿{stats.totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </div>
-            <div className="mt-2 flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 space-x-1.5">
-              <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 font-mono text-[10px]">
-                {stats.transactionCount} Txns
-              </span>
-              <span>Settled in Real-Time</span>
-            </div>
+            {loading || !stats ? (
+              <div className="space-y-2 py-1">
+                <div className="h-8 w-36 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
+                <div className="h-4 w-28 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
+              </div>
+            ) : (
+              <>
+                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+                  ฿{stats.totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
+                <div className="mt-2 flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 space-x-1.5">
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 font-mono text-[10px]">
+                    {stats.transactionCount} Txns
+                  </span>
+                  <span>Settled in Real-Time</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -318,13 +324,22 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
-              ฿{stats.verifiedLedgerBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </div>
-            <div className="mt-2 flex items-center text-xs font-semibold text-cyan-700 dark:text-cyan-400 space-x-1.5">
-              <FileCheck2 className="w-4 h-4" />
-              <span>Double-Entry ACID Balanced</span>
-            </div>
+            {loading || !stats ? (
+              <div className="space-y-2 py-1">
+                <div className="h-8 w-40 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
+                <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
+              </div>
+            ) : (
+              <>
+                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+                  ฿{stats.verifiedLedgerBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
+                <div className="mt-2 flex items-center text-xs font-semibold text-cyan-700 dark:text-cyan-400 space-x-1.5">
+                  <FileCheck2 className="w-4 h-4" />
+                  <span>Double-Entry ACID Balanced</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -340,13 +355,22 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-rose-600 dark:text-rose-400 tracking-tight">
-              {stats.highRiskFlags}
-            </div>
-            <div className="mt-2 flex items-center text-xs font-semibold text-rose-600 dark:text-rose-400 space-x-1.5">
-              <AlertTriangle className="w-4 h-4" />
-              <span>AMLO Trigger &ge; ฿2M or Gaussian Burst</span>
-            </div>
+            {loading || !stats ? (
+              <div className="space-y-2 py-1">
+                <div className="h-8 w-20 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
+                <div className="h-4 w-36 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
+              </div>
+            ) : (
+              <>
+                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-rose-600 dark:text-rose-400 tracking-tight">
+                  {stats.highRiskFlags}
+                </div>
+                <div className="mt-2 flex items-center text-xs font-semibold text-rose-600 dark:text-rose-400 space-x-1.5">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>AMLO Trigger &ge; ฿2M or Gaussian Burst</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -362,12 +386,21 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-extrabold font-mono text-purple-700 dark:text-purple-300 tracking-tight">
-              {stats.activeComplianceAlerts}
-            </div>
-            <div className="mt-2 flex items-center text-xs font-semibold text-purple-700 dark:text-purple-400 space-x-1.5">
-              <span>BOT &bull; AMLO &bull; PDPA &bull; FATF</span>
-            </div>
+            {loading || !stats ? (
+              <div className="space-y-2 py-1">
+                <div className="h-8 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
+                <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
+              </div>
+            ) : (
+              <>
+                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-purple-700 dark:text-purple-300 tracking-tight">
+                  {stats.activeComplianceAlerts}
+                </div>
+                <div className="mt-2 flex items-center text-xs font-semibold text-purple-700 dark:text-purple-400 space-x-1.5">
+                  <span>BOT &bull; AMLO &bull; PDPA &bull; FATF</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -412,41 +445,50 @@ export default function DashboardPage() {
 
           {/* Interactive Dynamic Bar & Area Chart */}
           <div className="space-y-3">
-            <div className="h-56 w-full flex items-end justify-between gap-2 sm:gap-4 pt-8 pb-2 px-2 border-b border-slate-200 dark:border-slate-800 relative">
-              {/* Background Grid Lines */}
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-                <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
-                <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
-                <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
+            {loading || !stats ? (
+              <div className="h-56 w-full flex items-center justify-center flex-col space-y-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl">
+                <RefreshCw className="w-6 h-6 text-cyan-500 animate-spin" />
+                <span className="text-xs font-mono text-slate-500 dark:text-slate-400">Loading settlement trajectory...</span>
               </div>
-
-              {volumeChartPoints.map((pt, idx) => {
-                const heightPercent = Math.max(12, Math.min(100, Math.round((pt.volume / maxChartVolume) * 100)));
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                    {/* Tooltip */}
-                    <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none z-20 bg-slate-900 text-white text-[10px] font-mono py-1 px-2 rounded-lg shadow-xl whitespace-nowrap">
-                      ฿{pt.volume.toLocaleString()} ({pt.hour})
-                    </div>
-
-                    {/* Bar Container */}
-                    <div
-                      style={{ height: `${heightPercent}%` }}
-                      className="w-full max-w-[48px] rounded-t-xl bg-gradient-to-t from-cyan-600 via-blue-600 to-indigo-500 group-hover:from-cyan-400 group-hover:to-blue-400 transition-all duration-200 relative overflow-hidden shadow-md shadow-cyan-600/10"
-                    >
-                      <div className="absolute inset-x-0 top-0 h-1 bg-white/40" />
-                    </div>
+            ) : (
+              <>
+                <div className="h-56 w-full flex items-end justify-between gap-2 sm:gap-4 pt-8 pb-2 px-2 border-b border-slate-200 dark:border-slate-800 relative">
+                  {/* Background Grid Lines */}
+                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+                    <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
+                    <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
+                    <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
                   </div>
-                );
-              })}
-            </div>
 
-            {/* X-Axis Labels */}
-            <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2">
-              {volumeChartPoints.map((pt, idx) => (
-                <span key={idx}>{pt.hour}</span>
-              ))}
-            </div>
+                  {volumeChartPoints.map((pt, idx) => {
+                    const heightPercent = Math.max(12, Math.min(100, Math.round((pt.volume / maxChartVolume) * 100)));
+                    return (
+                      <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
+                        {/* Tooltip */}
+                        <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none z-20 bg-slate-900 text-white text-[10px] font-mono py-1 px-2 rounded-lg shadow-xl whitespace-nowrap">
+                          ฿{pt.volume.toLocaleString()} ({pt.hour})
+                        </div>
+
+                        {/* Bar Container */}
+                        <div
+                          style={{ height: `${heightPercent}%` }}
+                          className="w-full max-w-[48px] rounded-t-xl bg-gradient-to-t from-cyan-600 via-blue-600 to-indigo-500 group-hover:from-cyan-400 group-hover:to-blue-400 transition-all duration-200 relative overflow-hidden shadow-md shadow-cyan-600/10"
+                        >
+                          <div className="absolute inset-x-0 top-0 h-1 bg-white/40" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* X-Axis Labels */}
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2">
+                  {volumeChartPoints.map((pt, idx) => (
+                    <span key={idx}>{pt.hour}</span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Chart Footnote Highlights */}
@@ -455,7 +497,11 @@ export default function DashboardPage() {
               <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
               <span className="text-slate-600 dark:text-slate-400 font-medium">Avg Settlement:</span>
               <span className="font-mono font-bold text-slate-900 dark:text-white">
-                ฿{stats.transactionCount > 0 ? (stats.totalVolume / stats.transactionCount).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "0"}
+                {loading || !stats ? (
+                  <span className="inline-block w-16 h-3.5 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                ) : (
+                  `฿${stats.transactionCount > 0 ? (stats.totalVolume / stats.transactionCount).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "0"}`
+                )}
               </span>
             </div>
 
@@ -495,62 +541,78 @@ export default function DashboardPage() {
 
           {/* Graphical Multi-Tier Progress Bars */}
           <div className="space-y-4">
-            {/* Low Risk Tier */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center space-x-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Normal Compliant (&lt;35%)</span>
-                </span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">
-                  {riskBreakdown.low.count} ({riskBreakdown.low.percentage}%)
-                </span>
+            {loading || !transactions ? (
+              <div className="space-y-4 py-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                      <div className="h-3 w-12 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2.5 overflow-hidden animate-pulse" />
+                  </div>
+                ))}
               </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                <div
-                  style={{ width: `${riskBreakdown.low.percentage}%` }}
-                  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                />
-              </div>
-            </div>
+            ) : (
+              <>
+                {/* Low Risk Tier */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span>Normal Compliant (&lt;35%)</span>
+                    </span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {riskBreakdown.low.count} ({riskBreakdown.low.percentage}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      style={{ width: `${riskBreakdown.low.percentage}%` }}
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                    />
+                  </div>
+                </div>
 
-            {/* Medium Risk Tier */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center space-x-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span>Elevated Scrutiny (35-64%)</span>
-                </span>
-                <span className="font-mono font-bold text-slate-900 dark:text-white">
-                  {riskBreakdown.medium.count} ({riskBreakdown.medium.percentage}%)
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                <div
-                  style={{ width: `${riskBreakdown.medium.percentage}%` }}
-                  className="bg-amber-400 h-full rounded-full transition-all duration-300"
-                />
-              </div>
-            </div>
+                {/* Medium Risk Tier */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      <span>Elevated Scrutiny (35-64%)</span>
+                    </span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {riskBreakdown.medium.count} ({riskBreakdown.medium.percentage}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      style={{ width: `${riskBreakdown.medium.percentage}%` }}
+                      className="bg-amber-400 h-full rounded-full transition-all duration-300"
+                    />
+                  </div>
+                </div>
 
-            {/* High Risk Tier */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-rose-700 dark:text-rose-400 flex items-center space-x-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  <span>AMLO High-Risk (&ge;65%)</span>
-                </span>
-                <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
-                  {riskBreakdown.high.count} ({riskBreakdown.high.percentage}%)
-                </span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                <div
-                  style={{ width: `${riskBreakdown.high.percentage}%` }}
-                  className="bg-rose-500 h-full rounded-full transition-all duration-300"
-                />
-              </div>
-            </div>
+                {/* High Risk Tier */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-rose-700 dark:text-rose-400 flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-500" />
+                      <span>AMLO High-Risk (&ge;65%)</span>
+                    </span>
+                    <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
+                      {riskBreakdown.high.count} ({riskBreakdown.high.percentage}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      style={{ width: `${riskBreakdown.high.percentage}%` }}
+                      className="bg-rose-500 h-full rounded-full transition-all duration-300"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Mathematical Anomaly Radar Card */}
@@ -598,55 +660,79 @@ export default function DashboardPage() {
         </div>
 
         <div className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
-          {transactions.slice(0, 5).map((tx) => (
-            <div
-              key={tx.id}
-              className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition"
-            >
-              <div className="flex items-center space-x-3">
-                <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
-                    tx.status === "APPROVED"
-                      ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800"
-                      : tx.status === "FLAGGED"
-                      ? "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800"
-                      : "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-800"
-                  }`}
-                >
-                  {tx.type === "CROSS_BORDER" ? "FX" : "TX"}
-                </div>
-                <div>
-                  <div className="font-bold text-slate-900 dark:text-white">
-                    {tx.sourceAccount.accountName} &rarr; {tx.destinationAccount.accountName}
+          {loading || !transactions ? (
+            <div className="p-4 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between py-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                    <div className="space-y-1.5">
+                      <div className="h-3.5 w-44 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+                      <div className="h-2.5 w-28 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
+                    </div>
                   </div>
-                  <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                    Ref: {tx.id.slice(0, 18)}... &bull; {new Date(tx.createdAt).toLocaleTimeString()}
+                  <div className="space-y-1 text-right">
+                    <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded animate-pulse ml-auto" />
+                    <div className="h-2.5 w-14 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse ml-auto" />
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between sm:justify-end space-x-4">
-                <div className="text-right">
-                  <div className="font-mono font-extrabold text-slate-900 dark:text-white text-sm">
-                    ฿{Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </div>
-                  <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    Risk: {(tx.riskScore * 100).toFixed(0)}% ({tx.status})
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    setSelectedTransaction(tx);
-                    router.push(`/compliance?txId=${tx.id}`);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 transition"
-                >
-                  Inspect
-                </button>
-              </div>
+              ))}
             </div>
-          ))}
+          ) : transactions.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 font-medium">
+              No transactions recorded in ledger yet.
+            </div>
+          ) : (
+            transactions.slice(0, 5).map((tx) => (
+              <div
+                key={tx.id}
+                className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition"
+              >
+                <div className="flex items-center space-x-3">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
+                      tx.status === "APPROVED"
+                        ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800"
+                        : tx.status === "FLAGGED"
+                        ? "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800"
+                        : "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-800"
+                    }`}
+                  >
+                    {tx.type === "CROSS_BORDER" ? "FX" : "TX"}
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 dark:text-white">
+                      {tx.sourceAccount.accountName} &rarr; {tx.destinationAccount.accountName}
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                      Ref: {tx.id.slice(0, 18)}... &bull; {new Date(tx.createdAt).toLocaleTimeString()}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end space-x-4">
+                  <div className="text-right">
+                    <div className="font-mono font-extrabold text-slate-900 dark:text-white text-sm">
+                      ฿{Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                    <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      Risk: {(tx.riskScore * 100).toFixed(0)}% ({tx.status})
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedTransaction(tx);
+                      router.push(`/compliance?txId=${tx.id}`);
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 transition"
+                  >
+                    Inspect
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

@@ -59,8 +59,8 @@ export default function TellerDeskPage() {
       balance: string;
       currency: string;
       status: string;
-    }[]
-  >(() => cachedAccounts || []);
+    }[] | null
+  >(() => cachedAccounts.length > 0 ? cachedAccounts : null);
 
   // Live Real-Time Transfer Studio States
   const [liveSourceId, setLiveSourceId] = useState(() => (cachedAccounts && cachedAccounts.length >= 2 ? cachedAccounts[0].id : ""));
@@ -85,14 +85,15 @@ export default function TellerDeskPage() {
     createdAt: string;
   } | null>(null);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => cachedAccounts.length === 0);
 
   const formatAccNo = (num: string) => {
     if (!maskPii || !num || num.length <= 4) return num;
     return num.slice(0, 3) + "-****-" + num.slice(-4);
   };
 
-  const loadData = async () => {
+  const loadData = async (isManual = false) => {
+    if (isManual) setLoading(true);
     try {
       const res = await fetch("/api/accounts");
       const data = await res.json();
@@ -107,6 +108,8 @@ export default function TellerDeskPage() {
       }
     } catch (err) {
       console.error("Non-blocking accounts refresh:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -195,8 +198,8 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
   };
 
   // Live Studio Calculations
-  const liveSourceAcc = accounts.find((a) => a.id === liveSourceId);
-  const liveDestAcc = accounts.find((a) => a.id === liveDestId);
+  const liveSourceAcc = accounts?.find((a) => a.id === liveSourceId);
+  const liveDestAcc = accounts?.find((a) => a.id === liveDestId);
   const numAmount = parseFloat(liveAmount) || 0;
   const currentSourceBalance = liveSourceAcc ? parseFloat(liveSourceAcc.balance) : 0;
   const isLiveOverdraft = liveSourceAcc ? numAmount > currentSourceBalance : false;
@@ -241,8 +244,8 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
     setLiveAmount(amount);
     setLiveType(type);
     setLiveNote(note);
-    if (accounts[srcIdx]) setLiveSourceId(accounts[srcIdx].id);
-    if (accounts[dstIdx]) setLiveDestId(accounts[dstIdx].id);
+    if (accounts && accounts[srcIdx]) setLiveSourceId(accounts[srcIdx].id);
+    if (accounts && accounts[dstIdx]) setLiveDestId(accounts[dstIdx].id);
     setLiveReceipt(null);
   };
 
@@ -294,7 +297,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
     }
   };
 
-  const selectedCustAcc = accounts.find((a) => a.id === selectedCustomerAccount);
+  const selectedCustAcc = accounts?.find((a) => a.id === selectedCustomerAccount);
 
   const printCustomerReceipt = () => {
     window.print();
@@ -354,7 +357,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
           </button>
 
           <button
-            onClick={loadData}
+            onClick={() => loadData(true)}
             disabled={loading}
             className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm transition cursor-pointer whitespace-nowrap"
           >
@@ -394,25 +397,35 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
               <span>Select Customer Account:</span>
               <span className="text-[10px] text-slate-500 font-normal">
-                {accounts.length} active customer accounts loaded
+                {loading || !accounts ? "Loading customer accounts..." : `${accounts.length} active customer accounts loaded`}
               </span>
             </label>
 
-            <select
-              value={selectedCustomerAccount}
-              onChange={(e) => setSelectedCustomerAccount(e.target.value)}
-              className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-bold"
-            >
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  [{acc.id}] {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()} [{acc.status}]
-                </option>
-              ))}
-            </select>
+            {loading || !accounts ? (
+              <div className="h-10 w-full bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+            ) : (
+              <select
+                value={selectedCustomerAccount}
+                onChange={(e) => setSelectedCustomerAccount(e.target.value)}
+                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-400 font-bold"
+              >
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    [{acc.id}] {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()} [{acc.status}]
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Balance & Action Card */}
-          {selectedCustAcc && (
+          {loading || !accounts ? (
+            <div className="lg:col-span-6 p-3.5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 shadow-sm animate-pulse space-y-2">
+              <div className="h-4 w-48 bg-slate-200 dark:bg-slate-800 rounded" />
+              <div className="h-3 w-32 bg-slate-100 dark:bg-slate-800/60 rounded" />
+              <div className="h-6 w-36 bg-slate-200 dark:bg-slate-800 rounded mt-1" />
+            </div>
+          ) : selectedCustAcc ? (
             <div className="lg:col-span-6 p-3.5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center space-x-2">
@@ -455,12 +468,19 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* Live Interactive Transfer Studio */}
-      {accounts.length >= 2 && (
+      {loading || !accounts ? (
+        <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 text-center space-y-3">
+          <RefreshCw className="w-7 h-7 text-cyan-500 animate-spin mx-auto" />
+          <p className="text-xs font-mono text-slate-500 dark:text-slate-400">
+            Initializing Live Double-Entry Transfer Studio...
+          </p>
+        </div>
+      ) : accounts.length >= 2 && (
         <div className="glass-panel rounded-3xl border border-slate-200 dark:border-cyan-800/80 p-6 shadow-xl relative overflow-hidden bg-white dark:bg-gradient-to-b dark:from-[#061022] dark:to-[#040914]">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-5 border-b border-slate-200 dark:border-slate-800/80 gap-3">
             <div className="flex items-center space-x-3">
@@ -827,7 +847,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
               <Wallet className="w-4 h-4" />
             </div>
             <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-              Customer Accounts ({accounts.length})
+              Customer Accounts ({loading || !accounts ? "..." : accounts.length})
             </h2>
           </div>
 
@@ -842,12 +862,28 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {accounts.map((acc) => {
-            const isFlagged = acc.status !== "ACTIVE";
-            return (
+          {loading || !accounts ? (
+            Array.from({ length: 5 }).map((_, idx) => (
               <div
-                key={acc.id}
-                className={`p-3.5 rounded-2xl border transition duration-200 ${
+                key={idx}
+                className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-900/60 animate-pulse space-y-2.5"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="h-4 w-14 bg-slate-200 dark:bg-slate-800 rounded" />
+                  <div className="h-3 w-8 bg-slate-200 dark:bg-slate-800 rounded" />
+                </div>
+                <div className="h-3.5 w-32 bg-slate-200 dark:bg-slate-800 rounded" />
+                <div className="h-3 w-24 bg-slate-100 dark:bg-slate-800/60 rounded" />
+                <div className="h-4 w-28 bg-slate-200 dark:bg-slate-800 rounded pt-1" />
+              </div>
+            ))
+          ) : (
+            accounts.map((acc) => {
+              const isFlagged = acc.status !== "ACTIVE";
+              return (
+                <div
+                  key={acc.id}
+                  className={`p-3.5 rounded-2xl border transition duration-200 ${
                   isFlagged
                     ? "bg-rose-50 border-rose-300 dark:bg-rose-950/20 dark:border-rose-800/50"
                     : "bg-slate-50 border-slate-200 dark:bg-slate-900/60 dark:border-slate-800/80"
@@ -881,7 +917,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       </div>
 
