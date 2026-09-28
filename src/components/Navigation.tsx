@@ -92,26 +92,26 @@ export default function Navigation() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-[#040810]/95 backdrop-blur-xl transition-colors duration-200 shadow-sm dark:shadow-none">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Left: Brand Logo */}
-        <Link href="/dashboard" className="flex items-center space-x-3 group shrink-0">
+        <Link href="/dashboard" className="flex items-center space-x-2.5 sm:space-x-3 group shrink-0">
           <div className="relative">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-cyan-500/25 group-hover:shadow-cyan-400/40 transition duration-300">
-              <ShieldAlert className="w-4.5 h-4.5 text-white" />
+            <div className="w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-cyan-500/25 group-hover:shadow-cyan-400/40 transition duration-300">
+              <ShieldAlert className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white" />
             </div>
             <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
             </span>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
+          <div className="flex items-center space-x-1.5">
+            <span className="font-black text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">
               FinGuard <span className="bg-gradient-to-r from-cyan-500 to-blue-500 bg-clip-text text-transparent">AI</span>
             </span>
           </div>
         </Link>
 
-        {/* Center: Horizontal Navigation Menu */}
+        {/* Center: Horizontal Navigation Menu (Desktop) */}
         <nav className="hidden md:flex items-center space-x-1 p-1 rounded-2xl bg-slate-100/90 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/90">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -135,33 +135,32 @@ export default function Navigation() {
         </nav>
 
         {/* Right: Controls & Indicator Bar */}
-        <div className="flex items-center space-x-2 shrink-0">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
           {/* Create Account Button */}
           <button
             onClick={() => setCreateAccountOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm"
+            className="flex items-center space-x-1.5 h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap"
             title="Create a new financial account for simulation"
           >
             <UserPlus className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
             <span className="hidden sm:inline">+ Create Account</span>
-            <span className="sm:hidden">+ Account</span>
+            <span className="sm:hidden text-[11px]">+ Account</span>
           </button>
 
           {/* Quick Transfer Button */}
           <button
             onClick={() => setQuickTransferOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25 transition cursor-pointer active:scale-95"
+            className="flex items-center space-x-1.5 h-9 sm:h-10 px-3 sm:px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25 transition cursor-pointer active:scale-95 whitespace-nowrap"
             title="Open Double-Entry ACID Transfer Modal"
           >
             <PlusCircle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">+ Transfer</span>
-            <span className="sm:hidden">+ Transfer</span>
+            <span>+ Transfer</span>
           </button>
 
           {/* Neon Database Status Badge */}
           <div
             title={dbStatus.connected ? "Connected to Neon Serverless PostgreSQL" : "Connecting to Neon Database..."}
-            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+            className={`hidden lg:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border ${
               dbStatus.connected
                 ? "bg-emerald-50 dark:bg-emerald-950/70 border-emerald-200 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-300"
                 : "bg-amber-50 dark:bg-amber-950/70 border-amber-200 dark:border-amber-700/60 text-amber-800 dark:text-amber-300"
@@ -172,18 +171,18 @@ export default function Navigation() {
                 dbStatus.connected ? "bg-emerald-500 animate-pulse" : "bg-amber-500 animate-pulse"
               }`}
             />
-            <span className="font-mono text-[10px] hidden sm:inline">
+            <span className="font-mono text-[10px]">
               {dbStatus.connected ? "Neon DB" : "Connecting..."}
             </span>
           </div>
 
           {/* RBAC Role Switcher */}
-          <div className="flex items-center space-x-1 px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs">
+          <div className="flex items-center space-x-1 px-2 py-1.5 h-9 sm:h-10 rounded-xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs">
             <UserCheck className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
             <select
               value={activeRole}
               onChange={(e) => handleRoleChange(e.target.value as RoleType)}
-              className="bg-transparent text-slate-800 dark:text-cyan-300 text-xs font-bold focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent text-slate-800 dark:text-cyan-300 text-[11px] sm:text-xs font-bold focus:outline-none cursor-pointer pr-1"
             >
               <option value="ADMIN" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">ADMIN</option>
               <option value="COMPLIANCE_OFFICER" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">OFFICER</option>
@@ -196,25 +195,25 @@ export default function Navigation() {
             onClick={toggleTheme}
             aria-label="Toggle Theme"
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-xs font-bold transition cursor-pointer text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white flex items-center space-x-1"
+            className="h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900/80 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/80 text-xs font-bold transition cursor-pointer text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white flex items-center space-x-1"
           >
             {theme === "dark" ? (
               <>
                 <Sun className="w-4 h-4 text-amber-400" />
-                <span className="hidden lg:inline text-[11px]">Light</span>
+                <span className="hidden xl:inline text-[11px]">Light</span>
               </>
             ) : (
               <>
                 <Moon className="w-4 h-4 text-cyan-600" />
-                <span className="hidden lg:inline text-[11px]">Dark</span>
+                <span className="hidden xl:inline text-[11px]">Dark</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Mobile Floating Bottom Navigation Dock */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#040810]/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/90 px-3 py-2 flex items-center justify-around shadow-lg dark:shadow-2xl">
+      {/* Mobile Floating Bottom Navigation Dock (Mobile App Experience) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#040810]/95 backdrop-blur-2xl border-t border-slate-200 dark:border-slate-800/90 px-2 py-2 flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -223,28 +222,28 @@ export default function Navigation() {
               key={item.href}
               href={item.href}
               prefetch={true}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold transition-all duration-150 ${
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-bold transition-all duration-150 ${
                 isActive
-                  ? "text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/50 border border-cyan-200 dark:border-cyan-500/30"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+                  ? "text-cyan-700 dark:text-cyan-300 bg-cyan-50/90 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-500/40 shadow-sm"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
-              <Icon className="w-4 h-4 mb-0.5" />
+              <Icon className={`w-4 h-4 mb-0.5 ${isActive ? "text-cyan-600 dark:text-cyan-400" : ""}`} />
               <span>{item.label}</span>
             </Link>
           );
         })}
         <button
-          onClick={() => setCreateAccountOpen(true)}
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-cyan-600 dark:text-cyan-400"
+          onClick={() => setQuickTransferOpen(true)}
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-bold text-cyan-600 dark:text-cyan-400 transition"
         >
-          <UserPlus className="w-4 h-4 mb-0.5" />
-          <span>+ Account</span>
+          <PlusCircle className="w-4 h-4 mb-0.5 text-cyan-500" />
+          <span>Transfer</span>
         </button>
         <button
           onClick={toggleTheme}
           aria-label="Toggle Theme"
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition"
+          className="flex flex-col items-center justify-center py-1 px-3 rounded-xl text-[10px] font-bold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition"
         >
           {theme === "dark" ? <Sun className="w-4 h-4 mb-0.5 text-amber-400" /> : <Moon className="w-4 h-4 mb-0.5 text-cyan-600" />}
           <span>{theme === "dark" ? "Light" : "Dark"}</span>

@@ -39,7 +39,7 @@ export default function ComplianceCopilotPage() {
     {
       id: "welcome-1",
       role: "assistant",
-      content: `### 🛡️ FinGuard AI Sovereign Compliance Copilot
+      content: `### FinGuard AI Sovereign Compliance Copilot
 I am your autonomous regulatory intelligence agent. I continuously cross-reference transactions and inquiries against **Bank of Thailand (BOT)**, **Anti-Money Laundering Office (AMLO)**, and **PDPA B.E. 2562** legal directives.
 
 Select a transaction or regulatory policy on the left, or query below.`,
