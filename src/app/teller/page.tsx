@@ -400,7 +400,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
             >
               {accounts.map((acc) => (
                 <option key={acc.id} value={acc.id}>
-                  {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()} [{acc.status}]
+                  [{acc.id}] {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()} [{acc.status}]
                 </option>
               ))}
             </select>
@@ -416,6 +416,15 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                   </span>
                   <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
                     {selectedCustAcc.status}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 mt-0.5">
+                  <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold">
+                    ID: {selectedCustAcc.id}
+                  </span>
+                  <span className="text-slate-400">&bull;</span>
+                  <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400">
+                    No: {formatAccNo(selectedCustAcc.accountNumber)}
                   </span>
                 </div>
                 <div className="font-mono text-sm font-extrabold text-cyan-700 dark:text-cyan-400 mt-1">
@@ -521,7 +530,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 >
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id} disabled={acc.id === liveDestId}>
-                      {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()}
+                      [{acc.id}] {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()}
                     </option>
                   ))}
                 </select>
@@ -572,7 +581,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 >
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id} disabled={acc.id === liveSourceId}>
-                      {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()}
+                      [{acc.id}] {acc.accountName} ({formatAccNo(acc.accountNumber)}) - ฿{Number(acc.balance).toLocaleString()}
                     </option>
                   ))}
                 </select>

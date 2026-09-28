@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   Sparkles,
   AlertTriangle,
+  RefreshCw,
+  Hash,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 
@@ -17,8 +19,23 @@ export default function CreateAccountModal() {
   const isOpen = useComplianceStore((s) => s.isCreateAccountOpen);
   const setIsOpen = useComplianceStore((s) => s.setCreateAccountOpen);
 
+  const generateRandomAuditId = () => {
+    const entropy = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const timestamp = Date.now().toString(36).slice(-4).toUpperCase();
+    return `FA-${timestamp}-${entropy}`;
+  };
+
+  const generateRandomAccountNumber = () => {
+    const branch = String(Math.floor(100 + Math.random() * 900));
+    const type = String(Math.floor(1 + Math.random() * 9));
+    const serial = String(Math.floor(10000 + Math.random() * 90000));
+    const checkDigit = String(Math.floor(1 + Math.random() * 9));
+    return `${branch}-${type}-${serial}-${checkDigit}`;
+  };
+
   const [accountName, setAccountName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
+  const [accountId, setAccountId] = useState(generateRandomAuditId);
+  const [accountNumber, setAccountNumber] = useState(generateRandomAccountNumber);
   const [balance, setBalance] = useState("200000");
   const [status, setStatus] = useState<"ACTIVE" | "UNDER_INVESTIGATION" | "FROZEN">("ACTIVE");
 
@@ -28,6 +45,7 @@ export default function CreateAccountModal() {
     message?: string;
     error?: string;
     account?: {
+      id?: string;
       accountNumber: string;
       accountName: string;
       balance: string;
@@ -41,9 +59,9 @@ export default function CreateAccountModal() {
     status: "ACTIVE" | "UNDER_INVESTIGATION" | "FROZEN";
     prefix: string;
   }) => {
-    const randomDigits = Math.floor(1000 + Math.random() * 9000);
     setAccountName(preset.name);
-    setAccountNumber(`${preset.prefix}-${new Date().getFullYear()}-${randomDigits}`);
+    setAccountId(generateRandomAuditId());
+    setAccountNumber(generateRandomAccountNumber());
     setBalance(preset.balance);
     setStatus(preset.status);
     setResult(null);
@@ -63,6 +81,7 @@ export default function CreateAccountModal() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: accountId.trim() || undefined,
           accountName: accountName.trim(),
           accountNumber: accountNumber.trim() || undefined,
           balance: parseFloat(balance) || 0,
@@ -75,14 +94,15 @@ export default function CreateAccountModal() {
       if (res.ok && data.success) {
         setResult({
           success: true,
-          message: "New financial account provisioned in Neon PostgreSQL ledger",
+          message: "New financial account provisioned with unique audit ID & randomized account number",
           account: data.account,
         });
         // Dispatch global event for live tables & selector updates
         window.dispatchEvent(new Event("finguard_tx_updated"));
         setTimeout(() => {
           setAccountName("");
-          setAccountNumber("");
+          setAccountId(generateRandomAuditId());
+          setAccountNumber(generateRandomAccountNumber());
           setBalance("200000");
           setStatus("ACTIVE");
         }, 1500);
@@ -235,19 +255,57 @@ export default function CreateAccountModal() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
-                <Wallet className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <span>Account Number (Optional)</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <Hash className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>Randomized Audit ID</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setAccountId(generateRandomAuditId())}
+                  className="text-[10px] font-bold text-cyan-600 hover:text-cyan-500 dark:text-cyan-400 flex items-center space-x-1 cursor-pointer"
+                  title="Generate new random Audit ID"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Re-roll</span>
+                </button>
+              </div>
+              <input
+                type="text"
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                required
+                className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-purple-700 dark:text-purple-300 font-mono font-bold focus:outline-none focus:border-cyan-500 transition"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                  <Wallet className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Randomized Account No.</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setAccountNumber(generateRandomAccountNumber())}
+                  className="text-[10px] font-bold text-cyan-600 hover:text-cyan-500 dark:text-cyan-400 flex items-center space-x-1 cursor-pointer"
+                  title="Generate new random Account Number"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Re-roll</span>
+                </button>
+              </div>
               <input
                 type="text"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="Auto-generated if empty"
-                className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-cyan-500 transition"
+                required
+                className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-blue-700 dark:text-cyan-300 font-mono font-bold focus:outline-none focus:border-cyan-500 transition"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Initial Balance (THB)
@@ -265,30 +323,30 @@ export default function CreateAccountModal() {
                 />
               </div>
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
-              <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-              <span>Account Status</span>
-            </label>
-            <select
-              value={status}
-              onChange={(e) =>
-                setStatus(e.target.value as "ACTIVE" | "UNDER_INVESTIGATION" | "FROZEN")
-              }
-              className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
-            >
-              <option value="ACTIVE" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-                ACTIVE (Standard operational account)
-              </option>
-              <option value="UNDER_INVESTIGATION" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-                UNDER_INVESTIGATION (AML Watchlist elevated scrutiny)
-              </option>
-              <option value="FROZEN" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
-                FROZEN (Account locked by regulatory injunction)
-              </option>
-            </select>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
+                <span>Account Status</span>
+              </label>
+              <select
+                value={status}
+                onChange={(e) =>
+                  setStatus(e.target.value as "ACTIVE" | "UNDER_INVESTIGATION" | "FROZEN")
+                }
+                className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-cyan-500"
+              >
+                <option value="ACTIVE" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
+                  ACTIVE (Standard operational account)
+                </option>
+                <option value="UNDER_INVESTIGATION" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
+                  UNDER_INVESTIGATION (AML Watchlist elevated scrutiny)
+                </option>
+                <option value="FROZEN" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white">
+                  FROZEN (Account locked by regulatory injunction)
+                </option>
+              </select>
+            </div>
           </div>
 
           {/* Feedback Banner */}
@@ -312,9 +370,10 @@ export default function CreateAccountModal() {
                 {result.message || result.error}
               </p>
               {result.account && (
-                <div className="mt-2 text-[10px] font-mono text-cyan-800 dark:text-cyan-300 bg-white dark:bg-slate-950/80 p-2 rounded-lg border border-slate-200 dark:border-slate-800 space-y-0.5">
-                  <div>Account Number: {result.account.accountNumber}</div>
-                  <div>Ledger Balance: ฿{Number(result.account.balance).toLocaleString()}</div>
+                <div className="mt-2 text-[10px] font-mono text-cyan-800 dark:text-cyan-300 bg-white dark:bg-slate-950/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1">
+                  {result.account.id && <div><span className="text-slate-500">Audit Account ID:</span> <span className="font-bold text-purple-600 dark:text-purple-400">{result.account.id}</span></div>}
+                  <div><span className="text-slate-500">Account Number:</span> <span className="font-bold text-blue-600 dark:text-cyan-300">{result.account.accountNumber}</span></div>
+                  <div><span className="text-slate-500">Ledger Balance:</span> <span className="font-bold text-emerald-600 dark:text-emerald-400">฿{Number(result.account.balance).toLocaleString()}</span></div>
                 </div>
               )}
             </div>

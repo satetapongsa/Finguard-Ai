@@ -103,6 +103,7 @@ export default function ReconciliationPage() {
       const data = await res.json();
       if (data.success) {
         await loadData();
+        window.dispatchEvent(new Event("finguard_tx_updated"));
       }
     } catch (err) {
       console.error("Failed to create quick account:", err);

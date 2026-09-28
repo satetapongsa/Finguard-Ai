@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
+      id: customId,
       accountName,
       accountNumber: customAccountNumber,
       balance = 100000,
@@ -86,32 +87,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate clean account number if not provided
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const accountNumber =
+    // Generate unique randomized Account ID for strict system transaction inspection
+    const generateRandomAuditId = () => {
+      const entropy = Math.random().toString(36).substring(2, 7).toUpperCase();
+      const timestamp = Date.now().toString(36).slice(-4).toUpperCase();
+      return `FA-${timestamp}-${entropy}`;
+    };
+
+    let accountId =
+      customId && typeof customId === "string" && customId.trim().length > 0
+        ? customId.trim()
+        : generateRandomAuditId();
+
+    // Verify ID uniqueness in database
+    for (let i = 0; i < 5; i++) {
+      const existingId = await prisma.financialAccount.findUnique({
+        where: { id: accountId },
+      });
+      if (!existingId) break;
+      accountId = generateRandomAuditId();
+    }
+
+    // Generate Thai Banking Standard 10-digit Account Number (XXX-X-XXXXX-X)
+    const generateRandomAccountNumber = () => {
+      const branch = String(Math.floor(100 + Math.random() * 900)); // 3 digits (e.g. 082, 102, 591)
+      const type = String(Math.floor(1 + Math.random() * 9)); // 1 digit (e.g. 1=savings, 2=current)
+      const serial = String(Math.floor(10000 + Math.random() * 90000)); // 5 digits
+      const checkDigit = String(Math.floor(1 + Math.random() * 9)); // 1 digit
+      return `${branch}-${type}-${serial}-${checkDigit}`;
+    };
+
+    let accountNumber =
       customAccountNumber && customAccountNumber.trim().length > 0
         ? customAccountNumber.trim()
-        : `ACC-${new Date().getFullYear()}-${randomSuffix}`;
+        : generateRandomAccountNumber();
 
-    // Check duplicate
-    const existing = await prisma.financialAccount.findUnique({
-      where: { accountNumber },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Account number ${accountNumber} already exists in database`,
-        },
-        { status: 409 }
-      );
+    // Ensure unique account number
+    for (let i = 0; i < 5; i++) {
+      const existing = await prisma.financialAccount.findUnique({
+        where: { accountNumber },
+      });
+      if (!existing) break;
+      accountNumber = generateRandomAccountNumber();
     }
 
     const initialBalance = new Prisma.Decimal(Math.max(0, parseFloat(balance.toString()) || 0));
 
     const newAccount = await prisma.financialAccount.create({
       data: {
+        id: accountId,
         accountNumber,
         accountName: accountName.trim(),
         balance: initialBalance,
@@ -120,10 +144,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    invalidateAccountsCache();
+
     return NextResponse.json(
       {
         success: true,
-        message: "Financial account created successfully in Neon database",
+        message: "Financial account provisioned successfully with unique audit ID and randomized account number",
         account: {
           ...newAccount,
           balance: newAccount.balance.toString(),
