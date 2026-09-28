@@ -27,8 +27,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["'Plus Jakarta Sans'", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
-        mono: ["'JetBrains Mono'", "monospace"],
+        sans: ["'Inter'", "-apple-system", "BlinkMacSystemFont", "'Segoe UI'", "Roboto", "'Helvetica Neue'", "Arial", "sans-serif"],
+        mono: ["'JetBrains Mono'", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
       },
       boxShadow: {
         glow: "0 0 25px -5px rgba(14, 165, 233, 0.3)",
