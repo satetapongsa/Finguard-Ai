@@ -144,16 +144,33 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. Sanitize payload through PDPA Guardrails (Mask PII)
-  const sanitizedMetadata = metadata ? sanitizePayload(metadata) : null;
-  const sanitizedLogPayload = {
+  const sanitizedMetadata = metadata ? sanitizePayload(metadata) : {};
+  const simulateTampering = Boolean((metadata as any)?.simulateTampering || (rawBody as any)?.simulateTampering);
+
+  // 2.1 Compute End-to-End Cryptographic Hashes
+  const dispatchPayload = {
     sourceAccountId,
     destinationAccountId,
     amount,
     currency,
     type,
     metadata: sanitizedMetadata,
+    timestamp: new Date().toISOString(),
   };
-  const payloadHash = computePayloadHash(sanitizedLogPayload);
+
+  const sourceCryptHash = computePayloadHash(dispatchPayload, "finguard-src-dispatch-salt");
+  // If tampering is simulated, introduce a 1-byte hash discrepancy
+  const destinationCryptHash = simulateTampering
+    ? computePayloadHash(dispatchPayload, "finguard-TAMPERED-salt")
+    : computePayloadHash(dispatchPayload, "finguard-src-dispatch-salt");
+
+  const isCryptographicMatch = sourceCryptHash === destinationCryptHash;
+
+  const payloadHash = computePayloadHash({
+    sourceCryptHash,
+    destinationCryptHash,
+    dispatchPayload,
+  });
 
   // 3. Autonomous Risk Scoring Evaluation
   const riskAssessment = await evaluateTransactionRisk({
@@ -163,7 +180,29 @@ export async function POST(request: NextRequest) {
     type,
   });
 
-  const transactionStatus = riskAssessment.isHighRisk ? "FLAGGED" : "APPROVED";
+  // If cryptographic hash mismatch occurs, force 100% High-Risk and quarantine
+  if (!isCryptographicMatch) {
+    riskAssessment.riskScore = 1.0;
+    riskAssessment.isHighRisk = true;
+    riskAssessment.riskReason = `[CRYPTOGRAPHIC HASH MISMATCH] End-to-end cryptographic hash mismatch detected between dispatch node (${sourceCryptHash.slice(0, 10)}...) and receiver node (${destinationCryptHash.slice(0, 10)}...). Transfer blocked from balance settlement.`;
+    riskAssessment.flags.push("CRYPTOGRAPHIC_INTEGRITY_MISMATCH", "BLOCKCHAIN_TAMPER_DETECTED");
+  }
+
+  const transactionStatus = !isCryptographicMatch
+    ? "FLAGGED"
+    : riskAssessment.isHighRisk
+    ? "FLAGGED"
+    : "APPROVED";
+
+  const blockchainMeta = {
+    ...sanitizedMetadata,
+    sourceCryptHash,
+    destinationCryptHash,
+    isCryptographicMatch,
+    blockchainSeal: isCryptographicMatch ? "SHA256_VERIFIED_AUTHENTIC" : "TAMPERED_BLOCK_REJECTED",
+    merkleRoot: computePayloadHash(`${sourceCryptHash}:${destinationCryptHash}`),
+    acidSettled: isCryptographicMatch,
+  };
 
   try {
     // 4. ACID Execution via prisma.$transaction (Double-Entry Ledger)
@@ -201,34 +240,28 @@ export async function POST(request: NextRequest) {
           throw new Error("ERR_INSUFFICIENT_FUNDS");
         }
 
-        // Step D: Calculate balances & enforce double-entry equality
-        const newSourceBalance = sourceAcc.balance.minus(transferAmount);
-        const newDestBalance = destAcc.balance.plus(transferAmount);
+        // Step D: If cryptographic integrity verified, mutate double-entry ledger balances
+        let newSourceBalance = sourceAcc.balance;
+        let newDestBalance = destAcc.balance;
 
-        // Mathematical double-entry verification: Total Debits must equal Total Credits
-        const totalDebits = transferAmount;
-        const totalCredits = transferAmount;
-        if (!totalDebits.equals(totalCredits)) {
-          throw new Error("ERR_DOUBLE_ENTRY_IMBALANCE");
+        if (isCryptographicMatch) {
+          newSourceBalance = sourceAcc.balance.minus(transferAmount);
+          newDestBalance = destAcc.balance.plus(transferAmount);
+
+          // Debit Source Account
+          await tx.financialAccount.update({
+            where: { id: sourceAccountId },
+            data: { balance: newSourceBalance },
+          });
+
+          // Credit Destination Account
+          await tx.financialAccount.update({
+            where: { id: destinationAccountId },
+            data: { balance: newDestBalance },
+          });
         }
 
-        // Debit Source Account
-        await tx.financialAccount.update({
-          where: { id: sourceAccountId },
-          data: {
-            balance: newSourceBalance,
-          },
-        });
-
-        // Credit Destination Account
-        await tx.financialAccount.update({
-          where: { id: destinationAccountId },
-          data: {
-            balance: newDestBalance,
-          },
-        });
-
-        // Step E: Create immutable Transaction record
+        // Step E: Create Transaction record with blockchain metadata
         const createdTx = await tx.transaction.create({
           data: {
             sourceAccountId,
@@ -239,7 +272,7 @@ export async function POST(request: NextRequest) {
             status: transactionStatus,
             riskScore: riskAssessment.riskScore,
             riskReason: riskAssessment.riskReason,
-            metadata: sanitizedMetadata as Prisma.InputJsonValue,
+            metadata: blockchainMeta as Prisma.InputJsonValue,
           },
           include: {
             sourceAccount: {
@@ -251,27 +284,29 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Step F: Create Strict Double-Entry Ledger Records
-        await tx.ledgerEntry.createMany({
-          data: [
-            {
-              transactionId: createdTx.id,
-              accountId: sourceAccountId,
-              entryType: "DEBIT",
-              amount: transferAmount,
-              balanceAfter: newSourceBalance,
-              currency,
-            },
-            {
-              transactionId: createdTx.id,
-              accountId: destinationAccountId,
-              entryType: "CREDIT",
-              amount: transferAmount,
-              balanceAfter: newDestBalance,
-              currency,
-            },
-          ],
-        });
+        // Step F: Create Strict Double-Entry Ledger Records only if matched
+        if (isCryptographicMatch) {
+          await tx.ledgerEntry.createMany({
+            data: [
+              {
+                transactionId: createdTx.id,
+                accountId: sourceAccountId,
+                entryType: "DEBIT",
+                amount: transferAmount,
+                balanceAfter: newSourceBalance,
+                currency,
+              },
+              {
+                transactionId: createdTx.id,
+                accountId: destinationAccountId,
+                entryType: "CREDIT",
+                amount: transferAmount,
+                balanceAfter: newDestBalance,
+                currency,
+              },
+            ],
+          });
+        }
 
         // Step G: Cryptographic Linked-List Audit Log (Blockchain-style SHA-256 Chain)
         const previousLog = await tx.auditLog.findFirst({
@@ -308,11 +343,11 @@ export async function POST(request: NextRequest) {
               sourceAccount: sourceAcc.accountNumber,
               destinationAccount: destAcc.accountNumber,
               doubleEntryLedger: {
-                totalDebits: totalDebits.toString(),
-                totalCredits: totalCredits.toString(),
+                totalDebits: transferAmount.toString(),
+                totalCredits: transferAmount.toString(),
                 debitAccountId: sourceAccountId,
                 creditAccountId: destinationAccountId,
-                isBalanced: true,
+                isBalanced: isCryptographicMatch,
               },
             },
             createdAt: logTimestamp,

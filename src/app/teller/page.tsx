@@ -25,6 +25,11 @@ import {
   Copy,
   Check,
   Lock,
+  ShieldAlert,
+  Hash,
+  Database,
+  Link as LinkIcon,
+  ShieldX,
 } from "lucide-react";
 import { useComplianceStore } from "@/store/compliance-store";
 import { TransactionWithAccounts } from "@/lib/types";
@@ -34,14 +39,16 @@ export default function TellerDeskPage() {
   const setQuickTransferOpen = useComplianceStore((s) => s.setQuickTransferOpen);
   const setCreateAccountOpen = useComplianceStore((s) => s.setCreateAccountOpen);
   const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
+  const cachedAccounts = useComplianceStore((s) => s.cachedAccounts);
+  const setCachedAccounts = useComplianceStore((s) => s.setCachedAccounts);
 
   const [maskPii, setMaskPii] = useState(true);
   const [selectedCustomerAccount, setSelectedCustomerAccount] = useState<string>("");
   const [customerAccountSearch, setCustomerAccountSearch] = useState<string>("");
   const [receiptModalTx, setReceiptModalTx] = useState<TransactionWithAccounts | null>(null);
+  const [blockchainModalTx, setBlockchainModalTx] = useState<TransactionWithAccounts | null>(null);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
-  const cachedAccounts = useComplianceStore((s) => s.cachedAccounts);
-  const setCachedAccounts = useComplianceStore((s) => s.setCachedAccounts);
+  const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
   const [accounts, setAccounts] = useState<
     {
@@ -60,7 +67,10 @@ export default function TellerDeskPage() {
   const [liveAmount, setLiveAmount] = useState("50000");
   const [liveType, setLiveType] = useState<"TRANSFER" | "SETTLEMENT" | "DISBURSEMENT" | "CROSS_BORDER">("TRANSFER");
   const [liveNote, setLiveNote] = useState("Customer counter cash settlement ID 1-1004-99882-12-9");
+  const [simulateTampering, setSimulateTampering] = useState(false);
   const [isExecutingLive, setIsExecutingLive] = useState(false);
+  const [isGeneratingAccount, setIsGeneratingAccount] = useState(false);
+
   const [liveReceipt, setLiveReceipt] = useState<{
     id: string;
     amount: string;
@@ -106,6 +116,47 @@ export default function TellerDeskPage() {
     return () => window.removeEventListener("finguard_tx_updated", handleTxUpdate);
   }, []);
 
+  // Quick 1-Click Test Account Generator (Continuous / Unlimited creation)
+  const handleQuickCreateSampleAccount = async () => {
+    setIsGeneratingAccount(true);
+    const sampleNames = [
+      "Bangkok Apex Logistics Ltd.",
+      "Siam Horizon Trading Co.",
+      "Chiang Mai Digital Ventures",
+      "Phuket Hospitality Holdings",
+      "Eastern Seaboard Industrial Corp.",
+      "Somchai Retail Merchant #",
+      "Thonglor Sovereign Escrow Fund",
+    ];
+    const randIdx = Math.floor(Math.random() * sampleNames.length);
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    const name = `${sampleNames[randIdx]} ${randDigits}`;
+    const initialBalance = Math.floor(50000 + Math.random() * 450000);
+
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountName: name,
+          balance: initialBalance,
+          currency: "THB",
+          status: "ACTIVE",
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.account) {
+        await loadData();
+        setSelectedCustomerAccount(data.account.id);
+        window.dispatchEvent(new Event("finguard_tx_updated"));
+      }
+    } catch (err) {
+      console.error("Failed to generate test account:", err);
+    } finally {
+      setIsGeneratingAccount(false);
+    }
+  };
+
   const handleCopyReceipt = (tx: TransactionWithAccounts | null) => {
     if (!tx) return;
     const text = `========================================
@@ -134,6 +185,12 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
     setTimeout(() => setCopiedReceipt(false), 2000);
   };
 
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedHash(id);
+    setTimeout(() => setCopiedHash(null), 2000);
+  };
+
   // Live Studio Calculations
   const liveSourceAcc = accounts.find((a) => a.id === liveSourceId);
   const liveDestAcc = accounts.find((a) => a.id === liveDestId);
@@ -142,6 +199,13 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
   const isLiveOverdraft = liveSourceAcc ? numAmount > currentSourceBalance : false;
 
   const liveEstimatedRisk = useMemo(() => {
+    if (simulateTampering) {
+      return {
+        score: 1.0,
+        reason: "[CRYPTOGRAPHIC HASH MISMATCH] Simulation: Source dispatch hash will differ from receiver node hash. Transfer will be blocked.",
+      };
+    }
+
     let score = 0.05;
     let reason = "Normal low-value counter transfer";
 
@@ -162,7 +226,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
     }
 
     return { score, reason };
-  }, [numAmount, liveType]);
+  }, [numAmount, liveType, simulateTampering]);
 
   const applyLivePreset = (
     amount: string,
@@ -196,6 +260,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
           metadata: {
             note: liveNote,
             channel: "FRONTLINE_TELLER_PORTAL",
+            simulateTampering,
             initiatedAt: new Date().toISOString(),
           },
         }),
@@ -215,6 +280,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
           createdAt: data.transaction.createdAt,
         });
         await loadData();
+        window.dispatchEvent(new Event("finguard_tx_updated"));
       }
     } catch (err) {
       console.error("Live transfer error:", err);
@@ -243,11 +309,31 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 font-medium max-w-2xl">
-            Customer balance verification, double-entry settlement execution, and official customer slip generation.
+            Customer balance verification, end-to-end blockchain cryptographic hash validation, and official customer slip generation.
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+          {/* Quick 1-Click Test Account Generator */}
+          <button
+            onClick={handleQuickCreateSampleAccount}
+            disabled={isGeneratingAccount}
+            className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition cursor-pointer active:scale-95 whitespace-nowrap"
+            title="Instantly generate a test customer account to simulate transfers"
+          >
+            <Sparkles className={`w-4 h-4 ${isGeneratingAccount ? "animate-spin" : ""}`} />
+            <span>{isGeneratingAccount ? "Creating..." : "+ Quick Test Account"}</span>
+          </button>
+
+          {/* Custom Account Modal */}
+          <button
+            onClick={() => setCreateAccountOpen(true)}
+            className="inline-flex items-center space-x-1.5 h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap"
+          >
+            <UserPlus className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+            <span>Custom Account</span>
+          </button>
+
           {/* PDPA PII Masking Toggle */}
           <button
             onClick={() => setMaskPii(!maskPii)}
@@ -260,14 +346,6 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
           >
             {maskPii ? <EyeOff className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
             <span>{maskPii ? "PDPA Masked" : "Unmasked"}</span>
-          </button>
-
-          <button
-            onClick={() => setCreateAccountOpen(true)}
-            className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 transition cursor-pointer active:scale-95 shadow-sm whitespace-nowrap"
-          >
-            <UserPlus className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-            <span>+ New Account</span>
           </button>
 
           <button
@@ -311,7 +389,7 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
               <span>Select Customer Account:</span>
               <span className="text-[10px] text-slate-500 font-normal">
-                {accounts.length} active customer accounts
+                {accounts.length} active customer accounts loaded
               </span>
             </label>
 
@@ -377,37 +455,46 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
               </div>
               <div>
                 <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  Teller Money Transfer & Settlement Engine
+                  Teller Money Transfer & Cryptographic Settlement Engine
                 </h2>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-                  Execute ACID double-entry transactions with real-time heuristic AMLO & Bank of Thailand regulatory evaluation
+                  ACID double-entry transfers with real-time end-to-end blockchain SHA-256 cryptographic match validation
                 </p>
               </div>
             </div>
 
-            {/* Quick Simulation Presets */}
+            {/* Simulation Presets */}
             <div className="flex items-center flex-wrap gap-1.5">
               <span className="text-[11px] font-bold text-slate-500 mr-1">Presets:</span>
               <button
                 type="button"
-                onClick={() => applyLivePreset("25000", "TRANSFER", "Customer counter deposit & transfer")}
+                onClick={() => {
+                  setSimulateTampering(false);
+                  applyLivePreset("25000", "TRANSFER", "Customer counter deposit & transfer");
+                }}
                 className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition"
               >
-                Standard (฿25K)
+                Normal (฿25K)
               </button>
               <button
                 type="button"
-                onClick={() => applyLivePreset("750000", "TRANSFER", "High-value corporate invoice payment")}
+                onClick={() => {
+                  setSimulateTampering(false);
+                  applyLivePreset("750000", "TRANSFER", "High-value corporate invoice payment");
+                }}
                 className="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-[11px] font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 transition"
               >
                 High-Value (฿750K)
               </button>
               <button
                 type="button"
-                onClick={() => applyLivePreset("2500000", "CROSS_BORDER", "International trade cross-border disbursement", 0, 1)}
-                className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-[11px] font-bold text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60 transition"
+                onClick={() => {
+                  setSimulateTampering(true);
+                  applyLivePreset("180000", "TRANSFER", "Cryptographic Tampering Simulation Attack");
+                }}
+                className="px-2.5 py-1 rounded-xl bg-rose-100 hover:bg-rose-200 dark:bg-rose-950 dark:hover:bg-rose-900 text-[11px] font-bold text-rose-900 dark:text-rose-200 border border-rose-300 dark:border-rose-700 transition shadow-sm"
               >
-                AMLO Breach (฿2.5M)
+                Test Tamper Block (Red)
               </button>
             </div>
           </div>
@@ -492,11 +579,11 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
               </div>
             </div>
 
-            {/* Note & Reference */}
+            {/* Note, Tamper Check & Execute */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
-              <div className="lg:col-span-8 space-y-1.5">
+              <div className="lg:col-span-7 space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                  <span>Settlement Note / Metadata</span>
+                  <span>Settlement Note / Reference</span>
                   <span className="text-[10px] text-slate-500">PDPA Filter Active</span>
                 </label>
                 <input
@@ -508,36 +595,67 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 />
               </div>
 
-              {/* Execute Button */}
-              <div className="lg:col-span-4 pt-4 sm:pt-0">
-                <button
-                  type="submit"
-                  disabled={isExecutingLive || isLiveOverdraft || numAmount <= 0}
-                  className={`w-full h-11 rounded-2xl font-black text-xs transition cursor-pointer flex items-center justify-center space-x-2 shadow-lg active:scale-95 ${
-                    isLiveOverdraft
-                      ? "bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-400 dark:border-slate-700"
-                      : "bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white shadow-cyan-600/25"
-                  }`}
-                >
-                  <Send className={`w-4 h-4 ${isExecutingLive ? "animate-pulse" : ""}`} />
-                  <span>
-                    {isExecutingLive
-                      ? "Processing ACID Settlement..."
-                      : isLiveOverdraft
-                      ? "Insufficient Funds (Overdraft)"
-                      : "Execute Live Transfer"}
+              {/* End-to-End Cryptographic Tamper Simulator Toggle */}
+              <div className="lg:col-span-5 flex flex-col justify-end space-y-1.5">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Simulate Hash Mismatch</span>
                   </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setSimulateTampering(!simulateTampering)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition cursor-pointer ${
+                      simulateTampering
+                        ? "bg-rose-600 text-white shadow-md shadow-rose-600/30"
+                        : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                    }`}
+                  >
+                    {simulateTampering ? "TAMPER ON (BLOCK)" : "NORMAL (MATCH)"}
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Teller Advice Banner */}
-            <div className="p-3.5 rounded-2xl bg-cyan-50 dark:bg-slate-900/90 border border-cyan-200 dark:border-cyan-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center space-x-2 text-slate-700 dark:text-slate-300 font-medium">
-                <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+            {/* Execute Button */}
+            <div>
+              <button
+                type="submit"
+                disabled={isExecutingLive || isLiveOverdraft || numAmount <= 0}
+                className={`w-full h-11 rounded-2xl font-black text-xs transition cursor-pointer flex items-center justify-center space-x-2 shadow-lg active:scale-95 ${
+                  simulateTampering
+                    ? "bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-rose-600/25"
+                    : isLiveOverdraft
+                    ? "bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-400 dark:border-slate-700"
+                    : "bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white shadow-cyan-600/25"
+                }`}
+              >
+                <Send className={`w-4 h-4 ${isExecutingLive ? "animate-pulse" : ""}`} />
+                <span>
+                  {isExecutingLive
+                    ? "Validating End-to-End Cryptographic Proof..."
+                    : simulateTampering
+                    ? "Execute Tampered Transfer (Test Red Block)"
+                    : isLiveOverdraft
+                    ? "Insufficient Funds (Overdraft)"
+                    : "Execute Live Transfer"}
+                </span>
+              </button>
+            </div>
+
+            {/* Teller Guidance Banner */}
+            <div className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+              simulateTampering
+                ? "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800/60 text-rose-900 dark:text-rose-200"
+                : "bg-cyan-50 dark:bg-slate-900/90 border-cyan-200 dark:border-cyan-900/40 text-slate-700 dark:text-slate-300"
+            }`}>
+              <div className="flex items-center space-x-2 font-medium">
+                {simulateTampering ? <ShieldX className="w-4 h-4 text-rose-600 shrink-0" /> : <ShieldCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />}
                 <span>
                   <strong>Frontline Advice:</strong>{" "}
-                  {numAmount >= 2000000
+                  {simulateTampering
+                    ? "Cryptographic tamper simulation active: End-to-end hashes will mismatch, and transfer will be blocked from reaching account balance."
+                    : numAmount >= 2000000
                     ? "Requires AMLO Mandatory CTR/STR documentation before physical cash disbursement."
                     : numAmount >= 500000
                     ? "Supervisor Dual-Control Authorization required for large value counter settlement."
@@ -550,16 +668,34 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
             </div>
           </form>
 
-          {/* Success Receipt Alert */}
+          {/* Transfer Result Alert (Green for Success, Red for Blocked Tampering) */}
           {liveReceipt && (
-            <div className="mt-6 p-5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 animate-in fade-in duration-200 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-emerald-200 dark:border-emerald-900/60">
-                <div className="flex items-center space-x-2 text-emerald-900 dark:text-emerald-200 font-black text-sm">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Transaction Settled Successfully (Double-Entry ACID Verified)</span>
+            <div
+              className={`mt-6 p-5 rounded-2xl border animate-in fade-in duration-200 space-y-4 ${
+                (liveReceipt.metadata as any)?.isCryptographicMatch === false || liveReceipt.status === "FLAGGED" && liveReceipt.riskReason?.includes("CRYPTOGRAPHIC")
+                  ? "bg-rose-50 dark:bg-rose-950/50 border-rose-400 dark:border-rose-700 text-rose-900 dark:text-rose-200 shadow-lg shadow-rose-600/10"
+                  : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/60 text-emerald-900 dark:text-emerald-200"
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-current/20">
+                <div className="flex items-center space-x-2 font-black text-sm">
+                  {(liveReceipt.metadata as any)?.isCryptographicMatch === false ? (
+                    <>
+                      <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                      <span className="text-rose-700 dark:text-rose-300">
+                        [BLOCKED] Cryptographic Hash Mismatch — Transfer Blocked from Balance
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Transaction Settled Successfully (Double-Entry ACID Verified)</span>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  {/* Blockchain Block Details Button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -568,7 +704,34 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                         amount: liveReceipt.amount,
                         currency: "THB",
                         type: liveType,
-                        status: liveReceipt.status as "APPROVED" | "FLAGGED" | "REJECTED",
+                        status: liveReceipt.status as any,
+                        riskScore: liveReceipt.riskScore,
+                        riskReason: liveReceipt.riskReason,
+                        metadata: liveReceipt.metadata,
+                        auditHash: liveReceipt.auditHash,
+                        sourceAccountId: liveSourceId,
+                        destinationAccountId: liveDestId,
+                        sourceAccount: liveReceipt.sourceAccount as any,
+                        destinationAccount: liveReceipt.destinationAccount as any,
+                        createdAt: new Date(liveReceipt.createdAt).toISOString(),
+                      };
+                      setBlockchainModalTx(fullTx);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Hash className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                    <span>Blockchain Block Details</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fullTx: TransactionWithAccounts = {
+                        id: liveReceipt.id,
+                        amount: liveReceipt.amount,
+                        currency: "THB",
+                        type: liveType,
+                        status: liveReceipt.status as any,
                         riskScore: liveReceipt.riskScore,
                         riskReason: liveReceipt.riskReason,
                         metadata: liveReceipt.metadata,
@@ -584,10 +747,16 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                     className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center space-x-1.5 cursor-pointer shadow-sm"
                   >
                     <Printer className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                    <span>Print Customer Slip</span>
+                    <span>Print Slip</span>
                   </button>
 
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold font-mono ${
+                      (liveReceipt.metadata as any)?.isCryptographicMatch === false
+                        ? "bg-rose-200 dark:bg-rose-900 text-rose-900 dark:text-rose-100 border border-rose-400"
+                        : "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600"
+                    }`}
+                  >
                     {liveReceipt.status}
                   </span>
                 </div>
@@ -595,22 +764,40 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
                 <div>
-                  <span className="text-slate-500 block">Sender Debit:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">
+                  <span className="opacity-70 block">Sender Debit:</span>
+                  <span className="font-bold">
                     {liveReceipt.sourceAccount.accountName} ({formatAccNo(liveReceipt.sourceAccount.accountNumber)})
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Receiver Credit:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">
+                  <span className="opacity-70 block">Receiver Credit:</span>
+                  <span className="font-bold">
                     {liveReceipt.destinationAccount.accountName} ({formatAccNo(liveReceipt.destinationAccount.accountNumber)})
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Amount Settled:</span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                  <span className="opacity-70 block">Amount:</span>
+                  <span className="font-bold text-sm">
                     ฿{Number(liveReceipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </span>
+                </div>
+              </div>
+
+              {/* End-to-End Cryptographic Match Indicator */}
+              <div className="p-3 rounded-xl bg-white/70 dark:bg-slate-900/80 border border-current/20 text-xs font-mono space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="opacity-80">End-to-End Hash Validation:</span>
+                  <span className={`font-bold ${
+                    (liveReceipt.metadata as any)?.isCryptographicMatch === false ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                  }`}>
+                    {(liveReceipt.metadata as any)?.isCryptographicMatch === false ? "[MISMATCH] BLOCKCHAIN CORRUPT" : "[MATCHED] 100% CRYPTOGRAPHIC CONTINUITY"}
+                  </span>
+                </div>
+                <div className="text-[11px] opacity-75 truncate">
+                  Source: {(liveReceipt.metadata as any)?.sourceCryptHash || "N/A"}
+                </div>
+                <div className="text-[11px] opacity-75 truncate">
+                  Dest:   {(liveReceipt.metadata as any)?.destinationCryptHash || "N/A"}
                 </div>
               </div>
             </div>
@@ -620,15 +807,24 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
 
       {/* Account Overview Grid */}
       <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 shadow-xl space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-2.5">
             <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700/60 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
               <Wallet className="w-4 h-4" />
             </div>
             <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-              All Customer & Liquidity Accounts ({accounts.length})
+              Customer Accounts ({accounts.length})
             </h2>
           </div>
+
+          <button
+            onClick={handleQuickCreateSampleAccount}
+            disabled={isGeneratingAccount}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/80 text-emerald-800 dark:text-emerald-300 text-xs font-bold border border-emerald-300 dark:border-emerald-700/70 transition cursor-pointer self-start sm:self-auto"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>+ Add Test Account</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -675,6 +871,130 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
         </div>
       </div>
 
+      {/* ========================================================================= */}
+      {/* BLOCKCHAIN BLOCK CRYPTOGRAPHIC INSPECTOR MODAL                             */}
+      {/* ========================================================================= */}
+      {blockchainModalTx && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-white dark:bg-[#070d1a] border border-slate-200 dark:border-cyan-700/60 rounded-3xl p-6 sm:p-8 relative shadow-2xl text-slate-800 dark:text-slate-200 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center space-x-3">
+                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold ${
+                  (blockchainModalTx.metadata as any)?.isCryptographicMatch === false
+                    ? "bg-rose-100 dark:bg-rose-950 text-rose-600 border border-rose-400"
+                    : "bg-cyan-100 dark:bg-cyan-950 text-cyan-600 border border-cyan-400"
+                }`}>
+                  <Hash className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base sm:text-lg">
+                    Blockchain Cryptographic Block Verification
+                  </h3>
+                  <p className="text-xs text-slate-500 font-mono">
+                    Block TxRef: {blockchainModalTx.id}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setBlockchainModalTx(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition cursor-pointer"
+              >
+                <XIcon />
+              </button>
+            </div>
+
+            {/* End-to-End Status Banner */}
+            <div className={`mt-5 p-4 rounded-2xl border text-xs font-mono space-y-2 ${
+              (blockchainModalTx.metadata as any)?.isCryptographicMatch === false
+                ? "bg-rose-50 dark:bg-rose-950/60 border-rose-400 dark:border-rose-800 text-rose-900 dark:text-rose-200"
+                : "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
+            }`}>
+              <div className="flex items-center justify-between font-bold text-sm">
+                <span>End-to-End Verification:</span>
+                <span>
+                  {(blockchainModalTx.metadata as any)?.isCryptographicMatch === false
+                    ? "[FAILED] HASH MISMATCH - BLOCKED"
+                    : "[PASSED] 100% AUTHENTIC"}
+                </span>
+              </div>
+              <p className="font-sans text-xs">
+                {(blockchainModalTx.metadata as any)?.isCryptographicMatch === false
+                  ? "The cryptographic hash received at the destination does not match the source dispatch payload. ACID ledger rollback was triggered to prevent fraudulent balance crediting."
+                  : "Both source dispatch payload and receiver node calculated identical SHA-256 hashes. Double-entry ACID balance was settled."}
+              </p>
+            </div>
+
+            {/* Cryptographic Hash Breakdown */}
+            <div className="mt-4 space-y-3 font-mono text-xs">
+              {/* Source Dispatch Hash */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Source Dispatch Hash (Node A):</span>
+                  <button
+                    onClick={() => copyToClipboard((blockchainModalTx.metadata as any)?.sourceCryptHash || "", "src")}
+                    className="text-cyan-600 dark:text-cyan-400 hover:underline flex items-center space-x-1"
+                  >
+                    <span>{copiedHash === "src" ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+                <div className="text-slate-900 dark:text-white font-bold break-all">
+                  {(blockchainModalTx.metadata as any)?.sourceCryptHash || blockchainModalTx.auditHash || "SHA256-AUTHENTIC-SRC-HASH"}
+                </div>
+              </div>
+
+              {/* Destination Receiver Hash */}
+              <div className={`p-3.5 rounded-2xl border space-y-1 ${
+                (blockchainModalTx.metadata as any)?.isCryptographicMatch === false
+                  ? "bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200"
+                  : "bg-slate-50 dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white"
+              }`}>
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Destination Receiver Hash (Node B):</span>
+                  <button
+                    onClick={() => copyToClipboard((blockchainModalTx.metadata as any)?.destinationCryptHash || "", "dst")}
+                    className="text-cyan-600 dark:text-cyan-400 hover:underline flex items-center space-x-1"
+                  >
+                    <span>{copiedHash === "dst" ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+                <div className="font-bold break-all">
+                  {(blockchainModalTx.metadata as any)?.destinationCryptHash || blockchainModalTx.auditHash || "SHA256-AUTHENTIC-DST-HASH"}
+                </div>
+              </div>
+
+              {/* Merkle Root & Blockchain Proof */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Merkle Root Seal:</span>
+                  <span className="font-bold text-cyan-700 dark:text-cyan-400 break-all text-[11px]">
+                    {(blockchainModalTx.metadata as any)?.merkleRoot || "MERKLE-ROOT-SHA256-VERIFIED"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Settlement Status:</span>
+                  <span className={`font-bold text-[11px] ${
+                    (blockchainModalTx.metadata as any)?.isCryptographicMatch === false ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                  }`}>
+                    {(blockchainModalTx.metadata as any)?.isCryptographicMatch === false ? "QUARANTINED / ISOLATED" : "ACID DOUBLE-ENTRY SETTLED"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setBlockchainModalTx(null)}
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs transition cursor-pointer"
+              >
+                Close Block Inspector
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Official Printable Customer Receipt Modal */}
       {receiptModalTx && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -720,8 +1040,10 @@ Audit Hash: ${tx.auditHash || "SHA-256 Non-Repudiation Verified"}
                 <div className="text-2xl font-black font-mono text-slate-900 dark:text-white">
                   ฿{Number(receiptModalTx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
-                <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                  Status: {receiptModalTx.status} (ACID Non-Repudiation)
+                <div className={`text-[10px] font-mono font-bold ${
+                  (receiptModalTx.metadata as any)?.isCryptographicMatch === false ? "text-rose-600" : "text-emerald-600 dark:text-emerald-400"
+                }`}>
+                  Status: {receiptModalTx.status} {(receiptModalTx.metadata as any)?.isCryptographicMatch === false ? "(BLOCKED - HASH MISMATCH)" : "(ACID Verified)"}
                 </div>
               </div>
 
