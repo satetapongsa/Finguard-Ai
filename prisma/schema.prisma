@@ -161,6 +161,214 @@ model CompliancePolicy {
   @@index([isActive])
 }
 
+// ---------------------------------------------------------
+// 3.1 AUTONOMOUS REGULATORY INTELLIGENCE & POLICY MAPPING (PHASE 1)
+// ---------------------------------------------------------
+
+enum RegulationStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum ChangeType {
+  ADD
+  MODIFY
+  DELETE
+  UNCHANGED
+}
+
+enum SourceType {
+  SYNTHETIC_DEMO
+  OFFICIAL_BOT
+}
+
+enum DocumentLanguage {
+  TH
+  EN
+  TH_EN
+  UNKNOWN
+}
+
+model Regulation {
+  id              String               @id @default(cuid())
+  regulationCode  String               // e.g. "BOT-COMP-001" or BOT official announcement no.
+  title           String
+  version         String               // e.g. "1.0", "2.0"
+  issuer          String               @default("Bank of Thailand") // e.g. "BOT", "AMLO"
+  sourceType      SourceType           @default(SYNTHETIC_DEMO)
+  sourceDocumentId String?             // Official BOT catalog document identifier
+  sourceUrl       String?              // e.g. "https://www.bot.or.th/announcements/BOT-COMP-001-v2.pdf"
+  documentUrl     String?              // Direct download URL for official PDF/circular
+  documentHash    String?              // SHA-256 fingerprint of the document buffer
+  language        DocumentLanguage     @default(EN)
+  retrievedAt     DateTime?            @default(now())
+  publishedAt     DateTime             @default(now())
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  status          RegulationStatus     @default(ACTIVE)
+
+  // Temporal supersession relationship (v2 supersedes v1)
+  supersedesId    String?
+  supersedes      Regulation?          @relation("RegulationSupersession", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy    Regulation[]         @relation("RegulationSupersession")
+
+  chunks          RegulationChunk[]
+  gaps            ComplianceGap[]
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@unique([regulationCode, version])
+  @@index([regulationCode])
+  @@index([sourceType])
+  @@index([status])
+  @@index([effectiveFrom])
+}
+
+model RegulationChunk {
+  id             String                       @id @default(cuid())
+  regulationId   String
+  chunkIndex     Int                          // 0, 1, 2, ...
+  clauseRef      String                       // e.g. "Clause 1.1", "Clause 1.2"
+  heading        String?
+  content        String                       @db.Text
+  previousContent String?                     @db.Text
+  contentHash    String?
+  changeType     ChangeType                   @default(UNCHANGED)
+  embedding      Unsupported("vector(1536)")?
+
+  regulation     Regulation                   @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  gaps           ComplianceGap[]
+
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+
+  @@unique([regulationId, chunkIndex])
+  @@index([regulationId])
+  @@index([clauseRef])
+  @@index([changeType])
+}
+
+enum PolicyStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model InternalPolicy {
+  id              String                       @id @default(cuid())
+  policyCode      String                       @unique // e.g. "P-102", "P-205", "P-310"
+  title           String
+  description     String?                      @db.Text
+  version         String                       @default("1.0")
+  status          PolicyStatus                 @default(ACTIVE)
+  ownerDepartment String                       // e.g. "Compliance Operations", "AML & Compliance", "Regulatory Affairs"
+  content         String                       @db.Text
+  embedding       Unsupported("vector(1536)")?
+  effectiveFrom   DateTime                     @default(now())
+  effectiveTo     DateTime?
+
+  gaps            ComplianceGap[]
+  tickets         DispatchTicket[]
+
+  createdAt       DateTime                     @default(now())
+  updatedAt       DateTime                     @updatedAt
+
+  @@index([ownerDepartment])
+  @@index([status])
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum GapStatus {
+  OPEN
+  REVIEWED
+  APPROVED
+  DISMISSED
+}
+
+model ComplianceGap {
+  id                    String           @id @default(cuid())
+  regulationId          String
+  regulationChunkId     String?
+  internalPolicyId      String
+  
+  gapTitle              String
+  finding               String           @db.Text
+  actionItem            String           @db.Text
+  riskLevel             RiskLevel        @default(HIGH)
+  status                GapStatus        @default(OPEN)
+  confidence            Float            @default(0.95) // e.g. 0.96 (96%)
+  reasoning             String?          @db.Text
+  
+  // Provenance and Grounded AI Traceability
+  reasoningProvider     String?          @default("deterministic") // e.g. "deepseek-chat", "openai-gpt4o", "deterministic"
+  promptVersion         String?          @default("REGULATORY_GAP_PROMPT_V1")
+  evidenceRegulation    String?          @db.Text
+  evidencePolicy        String?          @db.Text
+
+  reviewedBy            String?
+  reviewedAt            DateTime?
+  approvedAt            DateTime?
+
+  regulation            Regulation       @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  regulationChunk       RegulationChunk? @relation(fields: [regulationChunkId], references: [id], onDelete: SetNull)
+  internalPolicy        InternalPolicy   @relation(fields: [internalPolicyId], references: [id], onDelete: Cascade)
+  tickets               DispatchTicket[]
+
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@index([regulationId])
+  @@index([internalPolicyId])
+  @@index([riskLevel])
+  @@index([status])
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model DispatchTicket {
+  id               String          @id @default(cuid())
+  ticketNumber     String          @unique // e.g. "CMP-1024"
+  gapId            String
+  internalPolicyId String
+  targetDepartment String          // e.g. "Compliance Operations", "AML & Compliance"
+  title            String
+  actionItems      String          @db.Text
+  priority         TicketPriority  @default(HIGH)
+  status           TicketStatus    @default(OPEN)
+  assignedTo       String?
+  dispatchedAt     DateTime        @default(now())
+  dueDate          DateTime?
+
+  gap              ComplianceGap   @relation(fields: [gapId], references: [id], onDelete: Cascade)
+  internalPolicy   InternalPolicy  @relation(fields: [internalPolicyId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([gapId])
+  @@index([internalPolicyId])
+  @@index([status])
+  @@index([priority])
+}
+
 enum EntryType {
   DEBIT
   CREDIT

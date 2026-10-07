@@ -1,746 +1,386 @@
-"use client";
-
-import { useState, useEffect, useMemo } from "react";
+import prisma from "@/lib/prisma";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  TrendingUp,
-  ShieldAlert,
-  AlertTriangle,
-  Scale,
-  RefreshCw,
-  ArrowUpRight,
-  ExternalLink,
-  FileCheck2,
-  Lock,
-  Zap,
-  Database,
-  CheckCircle2,
-  Wallet,
-  ArrowRight,
-  ShieldCheck,
-  Bot,
-  BarChart3,
-  PieChart,
-  Activity,
-  CreditCard,
   FileText,
-  Clock,
-  Shield,
+  AlertTriangle,
   Layers,
+  CheckCircle,
+  Clock,
+  ArrowRight,
+  Bot,
+  ShieldAlert,
+  Building,
+  Calendar,
+  Sparkles,
+  GitCompare,
+  CheckCircle2,
 } from "lucide-react";
-import { useComplianceStore } from "@/store/compliance-store";
-import { TransactionWithAccounts } from "@/lib/types";
+import { TriggerWorkflowButton } from "@/components/TriggerWorkflowButton";
 
-interface DashboardStats {
-  totalVolume: number;
-  transactionCount: number;
-  verifiedLedgerBalance: number;
-  highRiskFlags: number;
-  activeComplianceAlerts: number;
-}
+export const dynamic = "force-dynamic";
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const setSelectedTransaction = useComplianceStore((s) => s.setSelectedTransaction);
-  const cachedStats = useComplianceStore((s) => s.cachedStats);
-  const cachedTransactions = useComplianceStore((s) => s.cachedTransactions);
-  const setCachedStats = useComplianceStore((s) => s.setCachedStats);
-  const setCachedTransactions = useComplianceStore((s) => s.setCachedTransactions);
-  const triggerFullSyncAndRefresh = useComplianceStore((s) => s.triggerFullSyncAndRefresh);
-
-  const [stats, setStats] = useState<DashboardStats | null>(() => cachedStats);
-  const [transactions, setTransactions] = useState<TransactionWithAccounts[] | null>(() => cachedTransactions.length > 0 ? cachedTransactions : null);
-  const [loading, setLoading] = useState(() => !cachedStats);
-  const [timeRange, setTimeRange] = useState<"24H" | "7D" | "30D">("24H");
-  const [activeChartTab, setActiveChartTab] = useState<"VOLUME" | "RISK">("VOLUME");
-
-  const [dbStatus, setDbStatus] = useState<{
-    connected: boolean;
-    provider: string;
-    isNeon?: boolean;
-    latencyMs?: number;
-  }>({
-    connected: true,
-    provider: "Neon PostgreSQL",
-    isNeon: true,
-    latencyMs: 18,
+export default async function ComplianceCommandCenterPage() {
+  // 1. Fetch real statistics from database
+  const regulationsCount = await prisma.regulation.count();
+  const chunksCount = await prisma.regulationChunk.count();
+  const policiesCount = await prisma.internalPolicy.count();
+  const allGaps = await prisma.complianceGap.findMany({
+    include: {
+      regulation: true,
+      internalPolicy: true,
+      tickets: true,
+    },
+    orderBy: { createdAt: "desc" },
   });
 
-  const loadData = async (isManual = false) => {
-    if (isManual) setLoading(true);
-    try {
-      // 1. Fetch critical dashboard metrics and transactions in parallel
-      const [statsRes, txRes] = await Promise.all([
-        fetch("/api/stats"),
-        fetch("/api/transactions?limit=50"),
-      ]);
+  const highRiskGaps = allGaps.filter((g) => g.riskLevel === "HIGH" || g.riskLevel === "CRITICAL");
+  const openGaps = allGaps.filter((g) => g.status === "OPEN");
+  const approvedGaps = allGaps.filter((g) => g.status === "APPROVED");
+  const reviewedGaps = allGaps.filter((g) => g.status === "REVIEWED");
+  const ticketsCount = await prisma.dispatchTicket.count();
 
-      const [statsData, txData] = await Promise.all([
-        statsRes.json(),
-        txRes.json(),
-      ]);
+  // Active regulation
+  const activeRegulation = await prisma.regulation.findFirst({
+    where: { status: "ACTIVE" },
+    include: {
+      chunks: { orderBy: { chunkIndex: "asc" } },
+      supersedes: true,
+    },
+    orderBy: { publishedAt: "desc" },
+  });
 
-      if (statsData.success && statsData.data) {
-        setStats(statsData.data);
-        setCachedStats(statsData.data);
-      }
-      if (txData.success && txData.data) {
-        setTransactions(txData.data);
-        setCachedTransactions(txData.data);
-      }
-
-      // 2. Fetch database status independently in background so it never blocks UI rendering
-      fetch("/api/database/status")
-        .then((r) => r.json())
-        .then((dbData) => {
-          if (dbData.success) {
-            setDbStatus({
-              connected: dbData.connected,
-              provider: dbData.provider,
-              isNeon: dbData.provider?.includes("Neon"),
-              latencyMs: dbData.latencyMs,
-            });
-          }
-        })
-        .catch(() => {});
-    } catch (err) {
-      console.error("Non-blocking dashboard refresh:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-
-    const handleTxUpdate = () => loadData();
-    window.addEventListener("finguard_tx_updated", handleTxUpdate);
-
-    const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        loadData();
-      }
-    }, 12000);
-
-    return () => {
-      window.removeEventListener("finguard_tx_updated", handleTxUpdate);
-      clearInterval(interval);
-    };
-  }, []);
-
-  // Risk Distribution Calculation for Charts
-  const riskBreakdown = useMemo(() => {
-    let low = 0;
-    let medium = 0;
-    let high = 0;
-
-    const list = transactions || [];
-    list.forEach((tx) => {
-      if (tx.riskScore >= 0.65) high++;
-      else if (tx.riskScore >= 0.35) medium++;
-      else low++;
-    });
-
-    const total = Math.max(1, list.length);
-    return {
-      low: { count: low, percentage: ((low / total) * 100).toFixed(1) },
-      medium: { count: medium, percentage: ((medium / total) * 100).toFixed(1) },
-      high: { count: high, percentage: ((high / total) * 100).toFixed(1) },
-      total: list.length,
-    };
-  }, [transactions]);
-
-  // Volume Trend Chart Data Generator
-  const volumeChartPoints = useMemo(() => {
-    const hours = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"];
-    const baseVal = stats && stats.totalVolume > 0 ? stats.totalVolume / 6 : 50000;
-    
-    return hours.map((hour, idx) => {
-      const multiplier = [0.4, 0.25, 0.75, 1.1, 0.95, 0.85, 1.0][idx];
-      const volume = Math.round(baseVal * multiplier);
-      const riskLevel = [10, 5, 25, 45, 60, 30, 20][idx];
-      return { hour, volume, riskLevel };
-    });
-  }, [stats?.totalVolume]);
-
-  const maxChartVolume = Math.max(...volumeChartPoints.map((p) => p.volume), 100000);
+  // Recent audit logs for Agent Activity summary
+  const recentAgentLogs = await prisma.auditLog.findMany({
+    where: {
+      actionType: {
+        in: [
+          "REGULATION_INGESTED",
+          "DIFF_ANALYSIS_COMPLETED",
+          "GAP_IDENTIFIED",
+          "GAP_APPROVED",
+          "DISPATCH_CREATED",
+        ],
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
 
   return (
-    <div className="space-y-6 pb-12" suppressHydrationWarning>
-      {/* Top Banner / Executive Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800/80">
+    <div className="min-h-screen bg-[#030712] text-slate-100 p-4 sm:p-6 lg:p-8 space-y-8">
+      {/* Top Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
         <div>
-          <div className="flex items-center space-x-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Executive Oversight & Risk Intelligence Hub
-            </h1>
-            <span className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-100 text-cyan-800 border border-cyan-300 dark:bg-cyan-950/80 dark:text-cyan-300 dark:border-cyan-700/60 font-mono">
-              Live ACID Engine
-            </span>
+          <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs uppercase tracking-wider mb-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            SYSTEM ONLINE • BFSI AUTONOMOUS REGULATORY INTELLIGENCE
           </div>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 font-medium max-w-2xl">
-            Real-time visual monitoring of liquidity volume, mathematical AML/CFT risk vectors, and regulatory compliance.
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
+            Compliance Command Center
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl">
+            Autonomous agent workflow continuously watches official Bank of Thailand (BOT) circulars,
+            extracts clauses, computes temporal diffs against predecessor versions, and maps compliance gaps to internal bank policies with Human-in-the-Loop approval.
           </p>
         </div>
 
-        {/* Top Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => triggerFullSyncAndRefresh()}
-            disabled={loading}
-            className="inline-flex items-center space-x-1.5 h-10 px-3.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900/80 dark:hover:bg-slate-800 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-semibold border border-slate-200 dark:border-slate-700/80 shadow-sm transition cursor-pointer whitespace-nowrap active:scale-95"
-            title="Purge cache and pull fresh data directly from PostgreSQL"
+        {/* Demo Action Trigger */}
+        <div className="flex items-center gap-3">
+          <TriggerWorkflowButton />
+          <Link
+            href="/dashboard/regulations"
+            className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-xs font-bold transition flex items-center gap-2"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-cyan-600 dark:text-cyan-400" : ""}`} />
-            <span>Sync</span>
-          </button>
+            <span>Regulatory Watch</span>
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+          </Link>
         </div>
       </div>
 
-      {/* Dedicated Workflow Portal Switcher / Quick Navigation Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Link 1: Frontline Teller Desk */}
-        <Link
-          href="/teller"
-          className="group p-4 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-transparent border border-cyan-200 dark:border-cyan-800/80 hover:border-cyan-400 dark:hover:border-cyan-500 transition duration-200 flex items-center justify-between shadow-sm"
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                Frontline Teller Desk
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                Customer transfers & slips
-              </div>
-            </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
+          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            REGULATIONS
           </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-cyan-500 group-hover:translate-x-1 transition duration-200" />
-        </Link>
-
-        {/* Link 2: Daily Operations & Reconciliation */}
-        <Link
-          href="/reconciliation"
-          className="group p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent border border-purple-200 dark:border-purple-800/80 hover:border-purple-400 dark:hover:border-purple-500 transition duration-200 flex items-center justify-between shadow-sm"
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
-              <Scale className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                Ledger Reconciliation
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                Audit ledger & CSV export
-              </div>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-purple-500 group-hover:translate-x-1 transition duration-200" />
-        </Link>
-
-        {/* Link 3: Immutable Audit Trail */}
-        <Link
-          href="/audit"
-          className="group p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-200 dark:border-amber-800/80 hover:border-amber-400 dark:hover:border-amber-500 transition duration-200 flex items-center justify-between shadow-sm"
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                Audit Trail Explorer
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                SHA-256 blockchain proof
-              </div>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 group-hover:translate-x-1 transition duration-200" />
-        </Link>
-
-        {/* Link 4: FinGuard AI */}
-        <Link
-          href="/compliance"
-          className="group p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 transition duration-200 flex items-center justify-between shadow-sm"
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 flex items-center justify-center group-hover:scale-110 transition duration-200">
-              <Bot className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                FinGuard AI
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                Sovereign compliance agent
-              </div>
-            </div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition duration-200" />
-        </Link>
-      </div>
-
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1 */}
-        <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-600" />
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Settled Volume (24h)
-            </span>
-            <div className="p-2.5 rounded-xl bg-cyan-100 dark:bg-cyan-950/60 border border-cyan-300 dark:border-cyan-800/40 text-cyan-700 dark:text-cyan-400 group-hover:scale-110 transition duration-200">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-4">
-            {loading || !stats ? (
-              <div className="space-y-2 py-1">
-                <div className="h-8 w-36 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
-                <div className="h-4 w-28 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
-              </div>
-            ) : (
-              <>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
-                  ฿{stats.totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </div>
-                <div className="mt-2 flex items-center text-xs font-semibold text-emerald-600 dark:text-emerald-400 space-x-1.5">
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80 font-mono text-[10px]">
-                    {stats.transactionCount} Txns
-                  </span>
-                  <span>Settled in Real-Time</span>
-                </div>
-              </>
-            )}
-          </div>
+          <div className="text-2xl font-black text-white">{regulationsCount}</div>
+          <div className="text-[10px] text-cyan-400 mt-1">BOT Active & Revoked</div>
         </div>
 
-        {/* KPI 2 */}
-        <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-600" />
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Verified Ledger Balance
-            </span>
-            <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400 group-hover:scale-110 transition duration-200">
-              <Scale className="w-4 h-4" />
-            </div>
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
+          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            SEMANTIC CHUNKS
           </div>
-          <div className="mt-4">
-            {loading || !stats ? (
-              <div className="space-y-2 py-1">
-                <div className="h-8 w-40 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
-                <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
-              </div>
-            ) : (
-              <>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
-                  ฿{stats.verifiedLedgerBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </div>
-                <div className="mt-2 flex items-center text-xs font-semibold text-cyan-700 dark:text-cyan-400 space-x-1.5">
-                  <FileCheck2 className="w-4 h-4" />
-                  <span>Double-Entry ACID Balanced</span>
-                </div>
-              </>
-            )}
-          </div>
+          <div className="text-2xl font-black text-white">{chunksCount}</div>
+          <div className="text-[10px] text-emerald-400 mt-1">Clauses Indexed</div>
         </div>
 
-        {/* KPI 3 */}
-        <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-600" />
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              High-Risk AML Flags
-            </span>
-            <div className="p-2.5 rounded-xl bg-rose-100 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800/40 text-rose-700 dark:text-rose-400 group-hover:scale-110 transition duration-200">
-              <ShieldAlert className="w-4 h-4" />
-            </div>
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
+          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            BANK POLICIES
           </div>
-          <div className="mt-4">
-            {loading || !stats ? (
-              <div className="space-y-2 py-1">
-                <div className="h-8 w-20 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
-                <div className="h-4 w-36 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
-              </div>
-            ) : (
-              <>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-rose-600 dark:text-rose-400 tracking-tight">
-                  {stats.highRiskFlags}
-                </div>
-                <div className="mt-2 flex items-center text-xs font-semibold text-rose-600 dark:text-rose-400 space-x-1.5">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>AMLO Trigger &ge; ฿2M or Gaussian Burst</span>
-                </div>
-              </>
-            )}
-          </div>
+          <div className="text-2xl font-black text-white">{policiesCount}</div>
+          <div className="text-[10px] text-indigo-400 mt-1">Internal Standards</div>
         </div>
 
-        {/* KPI 4 */}
-        <div className="glass-card rounded-2xl p-5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-indigo-600" />
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              Active Regulatory Directives
-            </span>
-            <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-800/40 text-purple-700 dark:text-purple-400 group-hover:scale-110 transition duration-200">
-              <Lock className="w-4 h-4" />
-            </div>
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-lg">
+          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+            OPEN GAPS
           </div>
-          <div className="mt-4">
-            {loading || !stats ? (
-              <div className="space-y-2 py-1">
-                <div className="h-8 w-16 bg-slate-200 dark:bg-slate-800 rounded-lg animate-pulse" />
-                <div className="h-4 w-32 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
-              </div>
-            ) : (
-              <>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono text-purple-700 dark:text-purple-300 tracking-tight">
-                  {stats.activeComplianceAlerts}
-                </div>
-                <div className="mt-2 flex items-center text-xs font-semibold text-purple-700 dark:text-purple-400 space-x-1.5">
-                  <span>BOT &bull; AMLO &bull; PDPA &bull; FATF</span>
-                </div>
-              </>
-            )}
+          <div className="text-2xl font-black text-amber-400">{openGaps.length}</div>
+          <div className="text-[10px] text-amber-400/80 mt-1">Pending Review</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-900/40 shadow-lg">
+          <div className="text-[11px] font-bold text-rose-300 uppercase tracking-wider mb-1">
+            HIGH / CRITICAL RISK
           </div>
+          <div className="text-2xl font-black text-rose-400">{highRiskGaps.length}</div>
+          <div className="text-[10px] text-rose-400/80 mt-1">Regulatory Penalties</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-900/40 shadow-lg">
+          <div className="text-[11px] font-bold text-emerald-300 uppercase tracking-wider mb-1">
+            DISPATCHED
+          </div>
+          <div className="text-2xl font-black text-emerald-400">{ticketsCount}</div>
+          <div className="text-[10px] text-emerald-400/80 mt-1">Action Tickets Issued</div>
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* INTERACTIVE ANALYTICS & CHARTS SECTION                                     */}
-      {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Chart 1: Financial Settlement Volume & Velocity Trend (8 cols) */}
-        <div className="lg:col-span-8 glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 sm:p-6 shadow-xl space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-2xl bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700/60 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
-                <BarChart3 className="w-5 h-5" />
+      {/* Middle Section: Active Regulatory Watch + Agent Activity Timeline */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Active Enactment Card (2 cols) */}
+        <div className="lg:col-span-2 p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <Bot className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-                  Settlement Velocity & Volume Trajectory
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  Active Regulatory Enactment
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                    ACTIVE
+                  </span>
                 </h2>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                  Hourly double-entry settlement distribution and volume flow
+                <p className="text-xs text-slate-400">
+                  Target circular governing compliance controls and internal bank policy mapping
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-              {(["24H", "7D", "30D"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setTimeRange(r)}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition cursor-pointer text-xs ${
-                    timeRange === r
-                      ? "bg-white text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300 shadow-sm border border-cyan-200 dark:border-cyan-800"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
+            <Link
+              href="/dashboard/regulations"
+              className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition"
+            >
+              <span>Inspect Diff</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
-          {/* Interactive Dynamic Bar & Area Chart */}
-          <div className="space-y-3">
-            {loading || !stats ? (
-              <div className="h-56 w-full flex items-center justify-center flex-col space-y-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl">
-                <RefreshCw className="w-6 h-6 text-cyan-500 animate-spin" />
-                <span className="text-xs font-mono text-slate-500 dark:text-slate-400">Loading settlement trajectory...</span>
-              </div>
-            ) : (
-              <>
-                <div className="h-56 w-full flex items-end justify-between gap-2 sm:gap-4 pt-8 pb-2 px-2 border-b border-slate-200 dark:border-slate-800 relative">
-                  {/* Background Grid Lines */}
-                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
-                    <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
-                    <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
-                    <div className="border-b border-dashed border-slate-400 dark:border-slate-600 w-full" />
-                  </div>
-
-                  {volumeChartPoints.map((pt, idx) => {
-                    const heightPercent = Math.max(12, Math.min(100, Math.round((pt.volume / maxChartVolume) * 100)));
-                    return (
-                      <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                        {/* Tooltip */}
-                        <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none z-20 bg-slate-900 text-white text-[10px] font-mono py-1 px-2 rounded-lg shadow-xl whitespace-nowrap">
-                          ฿{pt.volume.toLocaleString()} ({pt.hour})
-                        </div>
-
-                        {/* Bar Container */}
-                        <div
-                          style={{ height: `${heightPercent}%` }}
-                          className="w-full max-w-[48px] rounded-t-xl bg-gradient-to-t from-cyan-600 via-blue-600 to-indigo-500 group-hover:from-cyan-400 group-hover:to-blue-400 transition-all duration-200 relative overflow-hidden shadow-md shadow-cyan-600/10"
-                        >
-                          <div className="absolute inset-x-0 top-0 h-1 bg-white/40" />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* X-Axis Labels */}
-                <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2">
-                  {volumeChartPoints.map((pt, idx) => (
-                    <span key={idx}>{pt.hour}</span>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Chart Footnote Highlights */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs">
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
-              <span className="text-slate-600 dark:text-slate-400 font-medium">Avg Settlement:</span>
-              <span className="font-mono font-bold text-slate-900 dark:text-white">
-                {loading || !stats ? (
-                  <span className="inline-block w-16 h-3.5 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-                ) : (
-                  `฿${stats.transactionCount > 0 ? (stats.totalVolume / stats.transactionCount).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "0"}`
+          {activeRegulation ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-sm font-black text-cyan-400 px-2.5 py-1 rounded bg-cyan-950 border border-cyan-800">
+                  {activeRegulation.regulationCode} v{activeRegulation.version}
+                </span>
+                <span className="text-xs text-slate-400 flex items-center gap-1">
+                  <Building className="w-3.5 h-3.5 text-slate-500" />
+                  {activeRegulation.issuer}
+                </span>
+                {activeRegulation.supersedes && (
+                  <span className="text-[11px] text-amber-400 font-mono">
+                    (Supersedes v{activeRegulation.supersedes.version})
+                  </span>
                 )}
-              </span>
-            </div>
+              </div>
 
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-              <span className="text-slate-600 dark:text-slate-400 font-medium">Throughput:</span>
-              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                100% Invariant Checked
-              </span>
-            </div>
+              <h3 className="text-base font-bold text-white leading-snug">
+                {activeRegulation.title}
+              </h3>
 
-            <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-              <span className="text-slate-600 dark:text-slate-400 font-medium">Engine Mode:</span>
-              <span className="font-mono font-bold text-slate-900 dark:text-white">
-                Zero-Crash Isolation
-              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs">
+                <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block uppercase font-bold">Effective Date</span>
+                  <span className="text-slate-200 font-semibold">
+                    {new Date(activeRegulation.effectiveFrom).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block uppercase font-bold">Total Clauses</span>
+                  <span className="text-cyan-300 font-semibold">{activeRegulation.chunks.length} Chunks</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block uppercase font-bold">Diff Classification</span>
+                  <span className="text-amber-300 font-semibold">1 ADD • 2 MODIFY</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+                  <span className="text-[10px] text-slate-500 block uppercase font-bold">Workflow State</span>
+                  <span className="text-amber-400 font-black animate-pulse">WAITING_FOR_HUMAN</span>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="text-xs text-slate-400">No active regulations indexed.</p>
+          )}
         </div>
 
-        {/* Chart 2: Mathematical Risk & AML Severity Donut / Tier Distribution (4 cols) */}
-        <div className="lg:col-span-4 glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 p-5 sm:p-6 shadow-xl space-y-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800/60 flex items-center justify-center text-rose-700 dark:text-rose-400">
-                <PieChart className="w-4.5 h-4.5" />
+        {/* Right: Agent Activity / Timeline Card (1 col) */}
+        <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <ShieldAlert className="w-5 h-5" />
               </div>
-              <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-                Risk Severity Breakdown
-              </h2>
+              <div>
+                <h2 className="text-base font-bold text-white">Agent Activity</h2>
+                <p className="text-[11px] text-slate-400">Real-time workflow execution log</p>
+              </div>
             </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold">
-              {riskBreakdown.total} evaluated
-            </span>
+
+            <Link
+              href="/dashboard/agents"
+              className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition"
+            >
+              <span>Control Center</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
-          {/* Graphical Multi-Tier Progress Bars */}
-          <div className="space-y-4">
-            {loading || !transactions ? (
-              <div className="space-y-4 py-2">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="space-y-1.5">
-                    <div className="flex justify-between">
-                      <div className="h-3 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-                      <div className="h-3 w-12 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-                    </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800/80 rounded-full h-2.5 overflow-hidden animate-pulse" />
-                  </div>
-                ))}
+          <div className="space-y-3">
+            {/* Autonomous Stages */}
+            <div className="flex items-start gap-2.5 text-xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-bold text-white">Watcher Agent</div>
+                <div className="text-[11px] text-slate-400">Detected BOT-COMP-001 v2.0</div>
               </div>
-            ) : (
-              <>
-                {/* Low Risk Tier */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center space-x-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span>Normal Compliant (&lt;35%)</span>
-                    </span>
-                    <span className="font-mono font-bold text-slate-900 dark:text-white">
-                      {riskBreakdown.low.count} ({riskBreakdown.low.percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      style={{ width: `${riskBreakdown.low.percentage}%` }}
-                      className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                    />
-                  </div>
-                </div>
-
-                {/* Medium Risk Tier */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center space-x-1.5">
-                      <span className="w-2 h-2 rounded-full bg-amber-500" />
-                      <span>Elevated Scrutiny (35-64%)</span>
-                    </span>
-                    <span className="font-mono font-bold text-slate-900 dark:text-white">
-                      {riskBreakdown.medium.count} ({riskBreakdown.medium.percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      style={{ width: `${riskBreakdown.medium.percentage}%` }}
-                      className="bg-amber-400 h-full rounded-full transition-all duration-300"
-                    />
-                  </div>
-                </div>
-
-                {/* High Risk Tier */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-rose-700 dark:text-rose-400 flex items-center space-x-1.5">
-                      <span className="w-2 h-2 rounded-full bg-rose-500" />
-                      <span>AMLO High-Risk (&ge;65%)</span>
-                    </span>
-                    <span className="font-mono font-bold text-rose-600 dark:text-rose-400">
-                      {riskBreakdown.high.count} ({riskBreakdown.high.percentage}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                    <div
-                      style={{ width: `${riskBreakdown.high.percentage}%` }}
-                      className="bg-rose-500 h-full rounded-full transition-all duration-300"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Mathematical Anomaly Radar Card */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
-              <span>Statistical Heuristics Active:</span>
-              <span className="text-cyan-600 dark:text-cyan-400 font-mono">4 Engines</span>
             </div>
-            <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1 font-mono">
-              <li>&bull; Gaussian Z-Score Outlier (2.5&sigma;)</li>
-              <li>&bull; 24h Velocity &amp; Smurfing Ratio</li>
-              <li>&bull; AMLO ฿2,000,000 Threshold Limit</li>
-              <li>&bull; FATF Rec. 16 Cross-Border Scrutiny</li>
-            </ul>
+
+            <div className="flex items-start gap-2.5 text-xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-bold text-white">Ingestion Agent</div>
+                <div className="text-[11px] text-slate-400">Parsed 5 semantic clause chunks</div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 text-xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-bold text-white">Diff Agent</div>
+                <div className="text-[11px] text-slate-400">Classified 3 changes (1 ADD, 2 MODIFY)</div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 text-xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-bold text-white">Gap Analysis Agent</div>
+                <div className="text-[11px] text-slate-400">Mapped 3 HIGH-risk gaps to P-102, P-205, P-310</div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 text-xs p-2 rounded-xl bg-amber-950/30 border border-amber-800/40">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0 mt-1" />
+              <div>
+                <div className="font-black text-amber-300">Human-in-the-Loop Gate</div>
+                <div className="text-[11px] text-amber-200/90">Awaiting Compliance Officer review</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* RECENT SETTLEMENT FEED & SYSTEM RADAR                                     */}
-      {/* ========================================================================= */}
-      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/90 overflow-hidden shadow-xl">
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/40">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 flex items-center justify-center">
-              <Activity className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-tight">
-                Live Transaction Activity Stream
-              </h2>
-              <p className="text-[11px] text-slate-500">
-                Latest settlement mutations from Neon PostgreSQL database
-              </p>
-            </div>
+      {/* Bottom Section: High Priority Compliance Gaps Work Queue */}
+      <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <div>
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              High Priority Compliance Gaps
+              <span className="text-xs px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800">
+                {highRiskGaps.length} Requiring Action
+              </span>
+            </h2>
+            <p className="text-xs text-slate-400">
+              Regulatory clauses violating bank internal policies, requiring compliance officer approval before remediation dispatch
+            </p>
           </div>
 
           <Link
-            href="/reconciliation"
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 text-cyan-700 dark:text-cyan-400 text-xs font-bold border border-slate-200 dark:border-slate-700/80 transition shadow-sm"
+            href="/dashboard/gap-analysis"
+            className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition"
           >
-            <span>View Full Ledger</span>
+            <span>Full Gap Matrix</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        <div className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs">
-          {loading || !transactions ? (
-            <div className="p-4 space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between py-2">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                    <div className="space-y-1.5">
-                      <div className="h-3.5 w-44 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-                      <div className="h-2.5 w-28 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse" />
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-right">
-                    <div className="h-4 w-20 bg-slate-200 dark:bg-slate-800 rounded animate-pulse ml-auto" />
-                    <div className="h-2.5 w-14 bg-slate-100 dark:bg-slate-800/60 rounded animate-pulse ml-auto" />
-                  </div>
-                </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-950/80 text-slate-400 uppercase tracking-wider font-semibold text-[11px]">
+                <th className="py-3 px-4">BOT Clause</th>
+                <th className="py-3 px-4">Target Policy</th>
+                <th className="py-3 px-4">Owner Department</th>
+                <th className="py-3 px-4">Finding Summary</th>
+                <th className="py-3 px-4">Risk</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {highRiskGaps.map((gap) => (
+                <tr key={gap.id} className="hover:bg-slate-800/40 transition">
+                  <td className="py-3 px-4 font-mono font-bold text-cyan-400">
+                    {gap.gapTitle.includes("1.1") ? "Clause 1.1" : gap.gapTitle.includes("1.3") ? "Clause 1.3" : "Clause 1.5"}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="font-bold text-white">{gap.internalPolicy.policyCode}</span>
+                    <span className="text-[11px] text-slate-400 block truncate max-w-[180px]">
+                      {gap.internalPolicy.title}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-slate-300">
+                    {gap.internalPolicy.ownerDepartment}
+                  </td>
+                  <td className="py-3 px-4 text-slate-300 max-w-[280px]">
+                    <div className="line-clamp-2">{gap.finding}</div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="px-2 py-0.5 rounded font-black text-xs bg-rose-950 text-rose-300 border border-rose-800">
+                      {gap.riskLevel}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    {gap.status === "APPROVED" ? (
+                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                        APPROVED
+                      </span>
+                    ) : gap.status === "REVIEWED" ? (
+                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">
+                        REVIEWED
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950/80 text-amber-300 border border-amber-800 flex items-center gap-1 w-fit">
+                        <Clock className="w-3 h-3" /> OPEN
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <Link
+                      href="/dashboard/gap-analysis"
+                      className="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 transition inline-flex items-center gap-1"
+                    >
+                      <span>Review</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </td>
+                </tr>
               ))}
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 font-medium">
-              No transactions recorded in ledger yet.
-            </div>
-          ) : (
-            transactions.slice(0, 5).map((tx) => (
-              <div
-                key={tx.id}
-                className="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition"
-              >
-                <div className="flex items-center space-x-3">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
-                      tx.status === "APPROVED"
-                        ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800"
-                        : tx.status === "FLAGGED"
-                        ? "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800"
-                        : "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-800"
-                    }`}
-                  >
-                    {tx.type === "CROSS_BORDER" ? "FX" : "TX"}
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 dark:text-white">
-                      {tx.sourceAccount.accountName} &rarr; {tx.destinationAccount.accountName}
-                    </div>
-                    <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                      Ref: {tx.id.slice(0, 18)}... &bull; {new Date(tx.createdAt).toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between sm:justify-end space-x-4">
-                  <div className="text-right">
-                    <div className="font-mono font-extrabold text-slate-900 dark:text-white text-sm">
-                      ฿{Number(tx.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </div>
-                    <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      Risk: {(tx.riskScore * 100).toFixed(0)}% ({tx.status})
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setSelectedTransaction(tx);
-                      router.push(`/compliance?txId=${tx.id}`);
-                    }}
-                    className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 transition"
-                  >
-                    Inspect
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

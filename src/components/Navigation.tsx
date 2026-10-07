@@ -82,11 +82,11 @@ export default function Navigation() {
   };
 
   const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Teller Desk", href: "/teller", icon: CreditCard },
-    { label: "Reconciliation", href: "/reconciliation", icon: Scale },
+    { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Regulatory Watch", href: "/dashboard/regulations", icon: Bot },
+    { label: "Compliance Gaps", href: "/dashboard/gap-analysis", icon: Scale },
+    { label: "Agent Activity", href: "/dashboard/agents", icon: ShieldAlert },
     { label: "Audit Trail", href: "/audit", icon: FileCheck },
-    { label: "FinGuard AI", href: "/compliance", icon: Bot },
   ];
 
   return (
