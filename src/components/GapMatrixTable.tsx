@@ -429,7 +429,7 @@ export function GapMatrixTable({ gaps, userRole = "COMPLIANCE_OFFICER" }: GapMat
                   {getRiskBadge(selectedGap.riskLevel)}
                 </div>
                 <p className="text-xs text-slate-400">
-                  Human-in-the-Loop Governance & Traceable Evidence Matrix
+                  Human-in-the-Loop Governance & Traceable Evidence Triad
                 </p>
               </div>
             </div>
@@ -471,10 +471,11 @@ export function GapMatrixTable({ gaps, userRole = "COMPLIANCE_OFFICER" }: GapMat
               <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-900/40">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-bold text-rose-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-rose-400" /> 3. AI Reasoning & Impact Assessment
+                    <Sparkles className="w-3 h-3 text-rose-400" /> 3. Grounded Impact Finding & Risk Assessment
                   </span>
-                  <span className="font-mono text-xs font-bold text-emerald-400">
-                    Confidence: {Math.round(selectedGap.confidence * 100)}%
+                  <span className="font-mono text-xs font-bold text-emerald-400 flex items-center gap-1">
+                    <span>{Math.round(selectedGap.confidence * 100)}%</span>
+                    <span className="text-[9px] text-slate-400 font-sans font-normal">(Evidence-backed)</span>
                   </span>
                 </div>
                 <p className="p-2.5 rounded-lg bg-rose-950/20 border border-rose-900/40 text-slate-200 leading-relaxed text-[11px]">

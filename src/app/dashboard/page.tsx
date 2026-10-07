@@ -68,32 +68,84 @@ export default async function ComplianceCommandCenterPage() {
 
   return (
     <div className="min-h-screen bg-[#030712] text-slate-100 p-4 sm:p-6 lg:p-8 space-y-8">
-      {/* Top Banner */}
+      {/* Top Banner & Judge-Centered Value Proposition */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-cyan-400 font-mono text-xs uppercase tracking-wider mb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            SYSTEM ONLINE • BFSI AUTONOMOUS REGULATORY INTELLIGENCE
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              DEMO ENVIRONMENT • SYNTHETIC REGULATORY DATASET
+            </span>
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
+              BFSI REGULATORY INTELLIGENCE
+            </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            Compliance Command Center
+
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+            FinGuard AI
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl">
-            Autonomous agent workflow continuously watches official Bank of Thailand (BOT) circulars,
-            extracts clauses, computes temporal diffs against predecessor versions, and maps compliance gaps to internal bank policies with Human-in-the-Loop approval.
+          <p className="text-sm sm:text-base font-semibold text-cyan-300 mt-1">
+            Autonomous Regulatory Intelligence & Policy Mapping Agent
+          </p>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl leading-relaxed">
+            AI detects regulatory changes, maps impact to internal bank policy, and prepares remediation —
+            with mandatory Human Compliance Officer approval before operational action.
           </p>
         </div>
 
-        {/* Demo Action Trigger */}
-        <div className="flex items-center gap-3">
-          <TriggerWorkflowButton />
+        {/* Demo Action Trigger & Direct Call to Action */}
+        <div className="flex flex-wrap items-center gap-3">
           <Link
-            href="/dashboard/regulations"
-            className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-xs font-bold transition flex items-center gap-2"
+            href="/dashboard/gap-analysis"
+            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition flex items-center gap-2 shadow-lg shadow-cyan-500/20"
           >
-            <span>Regulatory Watch</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+            <span>Review Compliance Gaps</span>
+            <ArrowRight className="w-4 h-4" />
           </Link>
+          <TriggerWorkflowButton />
+        </div>
+      </div>
+
+      {/* Business Outcome Strip: DETECT -> DIFF -> IMPACT -> REVIEW -> ACT */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 text-xs">
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-800/60">
+          <span className="w-5 h-5 rounded-full bg-cyan-950 text-cyan-300 font-bold flex items-center justify-center text-[10px] border border-cyan-800">1</span>
+          <div>
+            <div className="font-bold text-white text-[11px]">DETECT</div>
+            <div className="text-[10px] text-slate-400">Watcher Agent</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-800/60">
+          <span className="w-5 h-5 rounded-full bg-cyan-950 text-cyan-300 font-bold flex items-center justify-center text-[10px] border border-cyan-800">2</span>
+          <div>
+            <div className="font-bold text-white text-[11px]">DIFF</div>
+            <div className="text-[10px] text-slate-400">Clause Deltas</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-800/60">
+          <span className="w-5 h-5 rounded-full bg-cyan-950 text-cyan-300 font-bold flex items-center justify-center text-[10px] border border-cyan-800">3</span>
+          <div>
+            <div className="font-bold text-white text-[11px]">IMPACT</div>
+            <div className="text-[10px] text-slate-400">Policy Retrieval</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-950/40 border border-amber-800/60">
+          <span className="w-5 h-5 rounded-full bg-amber-900 text-amber-200 font-bold flex items-center justify-center text-[10px] border border-amber-600">4</span>
+          <div>
+            <div className="font-bold text-amber-300 text-[11px]">REVIEW</div>
+            <div className="text-[10px] text-amber-400/90 font-semibold">Human Approval</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-950/60 border border-slate-800/60 col-span-2 sm:col-span-1">
+          <span className="w-5 h-5 rounded-full bg-emerald-950 text-emerald-300 font-bold flex items-center justify-center text-[10px] border border-emerald-800">5</span>
+          <div>
+            <div className="font-bold text-white text-[11px]">ACT & AUDIT</div>
+            <div className="text-[10px] text-slate-400">Dispatch Ticket</div>
+          </div>
         </div>
       </div>
 
@@ -220,6 +272,31 @@ export default async function ComplianceCommandCenterPage() {
                   <span className="text-amber-400 font-black animate-pulse">WAITING_FOR_HUMAN</span>
                 </div>
               </div>
+
+              {/* WHY THIS MATTERS — Executive Judge Summary */}
+              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-cyan-950/40 via-slate-900 to-indigo-950/30 border border-cyan-800/40 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-cyan-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Executive Summary • Why This Matters to Bank Compliance</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+                    HIGH RISK GAP
+                  </span>
+                </div>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  <strong className="text-white">Clause 1.1 Mandate:</strong> Record retention duration doubled from 12 months to 24 months.
+                  Internal Policy <strong className="text-cyan-300">P-102 (Compliance Operations)</strong> only satisfies 12 months.
+                  Non-compliance exposes the institution to regulatory sanctions under Section 11 of the Banking Act.
+                </p>
+                <div className="flex flex-wrap items-center justify-between pt-1 text-[11px] text-slate-400">
+                  <span>Remediation Target: <strong className="text-slate-200">Update P-102 Section 4</strong></span>
+                  <Link href="/dashboard/gap-analysis" className="text-cyan-400 font-bold hover:underline flex items-center gap-1">
+                    <span>Inspect Evidence Triad</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
             </div>
           ) : (
             <p className="text-xs text-slate-400">No active regulations indexed.</p>
@@ -282,11 +359,24 @@ export default async function ComplianceCommandCenterPage() {
               </div>
             </div>
 
-            <div className="flex items-start gap-2.5 text-xs p-2 rounded-xl bg-amber-950/30 border border-amber-800/40">
+            <div className="flex items-start gap-2.5 text-xs p-2.5 rounded-xl bg-amber-950/40 border border-amber-800/60">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0 mt-1" />
               <div>
-                <div className="font-black text-amber-300">Human-in-the-Loop Gate</div>
-                <div className="text-[11px] text-amber-200/90">Awaiting Compliance Officer review</div>
+                <div className="font-black text-amber-300 flex items-center gap-1.5">
+                  <span>● Human-in-the-Loop Review</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-900/80 text-amber-200">WAITING</span>
+                </div>
+                <div className="text-[11px] text-amber-200/90 mt-0.5">
+                  AI analysis complete. Operational action blocked until Compliance Officer approves.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 text-xs opacity-70">
+              <span className="w-4 h-4 rounded-full border border-slate-600 text-slate-500 font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">○</span>
+              <div>
+                <div className="font-bold text-slate-400">Dispatcher Agent</div>
+                <div className="text-[11px] text-slate-500">Awaiting human authorization to issue CMP ticket</div>
               </div>
             </div>
           </div>
