@@ -102,11 +102,27 @@ Visit `http://localhost:3000` and log in with:
 
 ## 4. Key Documentation & Runbooks
 
-- [3-Minute Competition Demo Script](docs/COMPETITION_DEMO.md)
+### Competition Operations & Submission (Phase 8)
+- [Official Release Manifest](docs/RELEASE_MANIFEST.md) — Tag `v1.0.1-competition`
+- [Final Competition Checklist](docs/FINAL_COMPETITION_CHECKLIST.md) — Pre-stage & submission sign-off
+- [Presentation Day Runbook](docs/PRESENTATION_DAY.md) — Stage execution & emergency protocols
+- [Environment Configuration Matrix](docs/FINAL_ENVIRONMENT_MATRIX.md) — Production, live, and offline configs
+- [Deployment Specification & Health Status](docs/DEPLOYMENT.md) — Vercel & Neon architecture
+- [Demo Execution Modes & Failsafe Guide](docs/FINAL_DEMO_MODES.md) — Modes A/B/C switching
+- [Competition Submission Package](submission/) — Executive Summary, Pitch Deck, Architecture, and One-Pager
+
+### Stage Presentation & Pitch (Phases 6–7)
+- [90-Second & 3-Minute Competition Pitch Script](docs/PITCH_SCRIPT.md)
+- [10-Slide Pitch Deck Specification](docs/SLIDE_DECK_SPEC.md)
 - [Competition Judge Q&A Defense Guide](docs/JUDGE_QA.md)
+- [Judge Objections Handling Matrix](docs/JUDGE_OBJECTIONS.md)
+- [Presentation Data & Evidence Script](docs/PRESENTATION_DATA.md)
+
+### Technical Specifications & Hardening (Phases 1–5)
 - [Benchmark & Evaluation Report](docs/BENCHMARK.md)
 - [Enterprise Architecture Diagram](docs/ARCHITECTURE.md)
 - [Security Architecture & Threat Model](docs/SECURITY.md)
+- [Stage-Ready Demo Runbook](docs/COMPETITION_DEMO.md)
 
 ---
 

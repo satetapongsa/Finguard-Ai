@@ -16,6 +16,14 @@ async function main() {
   console.log("FinGuard AI Demo Seed — Phase 1");
   console.log("========================================");
 
+  // 0. Production Database Safety Guard
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_RESET !== "true") {
+    console.error(
+      "❌ CRITICAL SAFETY GUARD: Destructive demo reset cannot run in PRODUCTION mode unless ALLOW_DEMO_RESET=true is explicitly set."
+    );
+    process.exit(1);
+  }
+
   // 1. Clean existing records safely
   await prisma.dispatchTicket.deleteMany();
   await prisma.complianceGap.deleteMany();
