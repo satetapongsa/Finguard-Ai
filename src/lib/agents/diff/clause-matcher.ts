@@ -13,6 +13,56 @@ export function normalizeClauseText(text: string): string {
 }
 
 /**
+ * Pure function comparing previous and current clauses in memory for deterministic evaluation
+ */
+export function computeClauseDiff(
+  previousClauses: Array<{ clauseRef: string; content: string }>,
+  currentClauses: Array<{ clauseRef: string; content: string }>
+): Array<{ clauseRef: string; changeType: ChangeType; explanation: string }> {
+  const oldMap = new Map<string, string>();
+  for (const c of previousClauses) {
+    oldMap.set(c.clauseRef.trim(), c.content);
+  }
+
+  const results: Array<{ clauseRef: string; changeType: ChangeType; explanation: string }> = [];
+  const currentRefs = new Set<string>();
+
+  for (const c of currentClauses) {
+    const ref = c.clauseRef.trim();
+    currentRefs.add(ref);
+    const oldContent = oldMap.get(ref);
+
+    let changeType: ChangeType = "UNCHANGED";
+    if (!oldContent) {
+      changeType = "ADD";
+    } else if (normalizeClauseText(c.content) === normalizeClauseText(oldContent)) {
+      changeType = "UNCHANGED";
+    } else {
+      changeType = "MODIFY";
+    }
+
+    results.push({
+      clauseRef: ref,
+      changeType,
+      explanation: generateChangeExplanation(ref, changeType, oldContent, c.content),
+    });
+  }
+
+  for (const old of previousClauses) {
+    const ref = old.clauseRef.trim();
+    if (!currentRefs.has(ref)) {
+      results.push({
+        clauseRef: ref,
+        changeType: "DELETE",
+        explanation: generateChangeExplanation(ref, "DELETE", old.content, null),
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
  * Deterministic explanation generator comparing old and new clause requirements
  */
 export function generateChangeExplanation(
